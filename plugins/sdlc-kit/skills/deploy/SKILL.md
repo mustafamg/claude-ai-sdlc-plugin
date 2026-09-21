@@ -1,7 +1,7 @@
 ---
 name: deploy
 description: Deploy (or roll back) the default branch by following the project's deployment runbook, with a human go-ahead before anything changes. Use when someone asks to deploy, ship, release, redeploy a service, roll back, or check what's deployed. Do NOT use for local runs, writing CI config, or debugging an outage without deploying (inspect read-only instead).
-argument-hint: [status | <service...> | all | rollback [<tag>]]
+argument-hint: "[status | <service...> | all | rollback [<tag>]]"
 disable-model-invocation: true
 ---
 
