@@ -46,11 +46,25 @@ A skill can only *ask* Claude not to weaken tests. The lock *enforces* it:
   ```
 
 ## Install
+There are two ways to install. Both install the plugin for your user, so every project and session
+picks it up.
+
+**From a terminal (shell).** This works everywhere, including for the Claude desktop app:
+```bash
+claude plugin marketplace add mustafamg/claude-ai-sdlc-plugin   # or a local path to this repo
+claude plugin install sdlc-kit@sdlc-kit
+```
+
+**Inside an interactive Claude Code session** (`claude` in a terminal, or an IDE extension), type:
 ```text
-/plugin marketplace add mustafamg/claude-ai-sdlc-plugin   # or a local path to this repo
+/plugin marketplace add mustafamg/claude-ai-sdlc-plugin
 /plugin install sdlc-kit@sdlc-kit
 ```
-Then, in the project, run `/sdlc-kit:init`.
+The `/plugin` command opens an interactive terminal UI, so in the Claude desktop app's Code tab, use
+the shell commands above instead. Start a new session after installing so the plugin loads.
+
+Then, inside a Claude Code session in your project, run `/sdlc-kit:init`. It's a skill, so it doesn't
+run from a shell.
 
 **Note on names:** the GitHub repo is `mustafamg/claude-ai-sdlc-plugin`, but the marketplace it
 defines and the plugin inside it are both named `sdlc-kit`. You add the marketplace by its repo
