@@ -47,15 +47,20 @@ A skill can only *ask* Claude not to weaken tests. The lock *enforces* it:
 
 ## Install
 ```text
-/plugin marketplace add <org>/sdlc-kit          # or a local path to this repo
+/plugin marketplace add mustafamg/claude-ai-sdlc-plugin   # or a local path to this repo
 /plugin install sdlc-kit@sdlc-kit
 ```
 Then, in the project, run `/sdlc-kit:init`.
 
+**Note on names:** the GitHub repo is `mustafamg/claude-ai-sdlc-plugin`, but the marketplace it
+defines and the plugin inside it are both named `sdlc-kit`. You add the marketplace by its repo
+(`mustafamg/claude-ai-sdlc-plugin`), then install and refer to the plugin as `sdlc-kit@sdlc-kit`
+(`<plugin>@<marketplace>`), and its skills as `/sdlc-kit:<skill>`.
+
 **For a team,** check this into the project's `.claude/settings.json` (`/sdlc-kit:init` can add it):
 ```json
 {
-  "extraKnownMarketplaces": { "sdlc-kit": { "source": { "source": "github", "repo": "<org>/sdlc-kit" } } },
+  "extraKnownMarketplaces": { "sdlc-kit": { "source": { "source": "github", "repo": "mustafamg/claude-ai-sdlc-plugin" } } },
   "enabledPlugins": { "sdlc-kit@sdlc-kit": true }
 }
 ```
@@ -93,3 +98,6 @@ These were learned the hard way on the first project that used this kit:
 bash tests/run-tests.sh                  # the lock, hook and guard regression suite
 claude plugin validate plugins/sdlc-kit  # manifest and component validation
 ```
+
+## License
+MIT. See [LICENSE](LICENSE).

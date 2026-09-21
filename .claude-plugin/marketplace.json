@@ -2,14 +2,21 @@
   "name": "sdlc-kit",
   "description": "An AI-native SDLC toolkit for Claude Code: stage-by-stage skills, a verifier subagent, and hook-enforced guardrails.",
   "owner": {
-    "name": "mst"
+    "name": "mustafamg",
+    "url": "https://github.com/mustafamg"
   },
   "plugins": [
     {
       "name": "sdlc-kit",
       "source": "./plugins/sdlc-kit",
       "description": "AI-native SDLC for Claude Code: intent → spec → plan → test-first build → verified PR → gated deploy, with policy skills and a hook-enforced test lock.",
-      "version": "0.1.0"
+      "version": "0.1.0",
+      "author": {
+        "name": "mustafamg"
+      },
+      "homepage": "https://github.com/mustafamg/claude-ai-sdlc-plugin",
+      "repository": "https://github.com/mustafamg/claude-ai-sdlc-plugin",
+      "license": "MIT"
     }
   ]
 }

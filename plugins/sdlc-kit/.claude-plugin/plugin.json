@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "description": "AI-native SDLC for Claude Code: intent → spec → plan → test-first build → verified PR → gated deploy, with policy skills and a hook-enforced test lock.",
   "author": {
-    "name": "mst"
-  }
+    "name": "mustafamg",
+    "url": "https://github.com/mustafamg"
+  },
+  "homepage": "https://github.com/mustafamg/claude-ai-sdlc-plugin",
+  "repository": "https://github.com/mustafamg/claude-ai-sdlc-plugin",
+  "license": "MIT"
 }

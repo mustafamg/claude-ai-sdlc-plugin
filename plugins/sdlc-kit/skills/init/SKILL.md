@@ -64,11 +64,11 @@ fill it in without asking.
 
 ## 8. Team settings (optional)
 Offer to add the marketplace and plugin to the checked-in `.claude/settings.json`, so teammates get the
-kit automatically. Ask for the marketplace repo (e.g. `org/sdlc-kit`) and merge, don't overwrite:
+kit automatically. Ask for the marketplace repo (default `mustafamg/claude-ai-sdlc-plugin`; a fork works too) and merge, don't overwrite:
 ```json
 {
   "extraKnownMarketplaces": {
-    "sdlc-kit": { "source": { "source": "github", "repo": "<org>/sdlc-kit" } }
+    "sdlc-kit": { "source": { "source": "github", "repo": "mustafamg/claude-ai-sdlc-plugin" } }
   },
   "enabledPlugins": { "sdlc-kit@sdlc-kit": true }
 }
