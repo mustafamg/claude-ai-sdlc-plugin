@@ -1,0 +1,9 @@
+{
+  "name": "sdlc-kit",
+  "displayName": "SDLC Kit",
+  "version": "0.1.0",
+  "description": "AI-native SDLC for Claude Code: intent → spec → plan → test-first build → verified PR → gated deploy, with policy skills and a hook-enforced test lock.",
+  "author": {
+    "name": "mst"
+  }
+}

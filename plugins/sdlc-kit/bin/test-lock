@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# Test lock for the sdlc-kit build loop. Records which test files are frozen and the commit(s) they were
+# frozen at. test-lock-guard.sh (a PreToolUse hook) blocks agent edits that would break a lock, and
+# `check` uses git to prove nothing locked has changed.
+#
+# Two modes, picked from the file name:
+#   add-only  Python test files (test_*.py, *_test.py). Later steps may ADD tests, fixtures, and
+#             imports, but everything that existed at a lock point must stay unchanged (checked by lib/
+#             test_lock_ast.py). Each `lock` of a changed file adds a new lock point.
+#   whole     Everything else: test support/harness files and non-Python tests. Frozen entirely.
+# Without python3, add-only files fall back to `whole`.
+#
+#   test-lock lock <file>...       lock committed, clean files at HEAD (paths relative to repo root)
+#   test-lock status               list locked files, their mode and lock points
+#   test-lock check                exit 1 if anything locked has changed
+#   test-lock unlock [<file>...]   remove locks on the named files, or all locks with no files.
+#                                     Humans only: run it in your own terminal.
+#
+# The lock file (.claude/test-lock) is local state and is gitignored. Each worktree has its own.
+# Lines are `<path>\t<commit>[\t<mode>]`. An add-only file can have several lines (lock points).
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+lock="$root/.claude/test-lock"
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+checker="$(cd "$here/.." && pwd)/lib/test_lock_ast.py"
+cmd=${1:-status}
+shift || true
+
+relpath() {
+  local p=${1#"$root"/}
+  echo "${p#./}"
+}
+have_python() { command -v python3 >/dev/null 2>&1; }
+mode_for_name() {
+  case "$(basename "$1")" in
+    test_*.py | *_test.py) have_python && echo add-only || echo whole ;;
+    *) echo whole ;;
+  esac
+}
+lines_for() { [[ -f "$lock" ]] && awk -F'\t' -v r="$1" '$1 == r' "$lock" || true; }
+mode_of() {
+  local m
+  m=$(lines_for "$1" | head -1 | cut -f3)
+  [[ -n "$m" ]] || m=$(mode_for_name "$1")
+  if [[ "$m" == add-only ]] && ! have_python; then m=whole; fi
+  echo "$m"
+}
+locked_paths() { [[ -s "$lock" ]] && cut -f1 "$lock" | awk '!seen[$0]++' || true; }
+
+case "$cmd" in
+  lock)
+    [[ $# -gt 0 ]] || { echo "usage: test-lock lock <file>..." >&2; exit 2; }
+    head=$(git -C "$root" rev-parse --verify -q HEAD) || {
+      echo "Not locked: the repository has no commits yet. Commit the tests first." >&2
+      exit 1
+    }
+    touch "$lock"
+    for f in "$@"; do
+      rel=$(relpath "$f")
+      if ! git -C "$root" cat-file -e "HEAD:$rel" 2>/dev/null; then
+        echo "Not locked: $rel isn't committed at HEAD. Commit the tests first." >&2
+        exit 1
+      fi
+      if ! git -C "$root" diff --quiet HEAD -- "$rel"; then
+        echo "Not locked: $rel has uncommitted changes. Commit the tests first." >&2
+        exit 1
+      fi
+      existing=$(lines_for "$rel" | cut -f2)
+      if [[ -z "$existing" ]]; then
+        mode=$(mode_for_name "$rel")
+        printf '%s\t%s\t%s\n' "$rel" "$head" "$mode" >> "$lock"
+        echo "locked ($mode): $rel @ ${head:0:8}"
+      elif [[ "$(mode_of "$rel")" == whole ]]; then
+        # Keep the original lock commit: re-locking must never launder edits.
+        echo "already locked (whole): $rel"
+      else
+        # shellcheck disable=SC2086
+        if ! out=$(python3 "$checker" check "$root" "$rel" $existing); then
+          echo "Not locked: $rel no longer matches its earlier lock points:" >&2
+          echo "$out" >&2
+          exit 1
+        fi
+        last=$(tail -1 <<<"$existing")
+        if git -C "$root" diff --quiet "$last" -- "$rel"; then
+          echo "already locked (add-only): $rel"
+        else
+          printf '%s\t%s\t%s\n' "$rel" "$head" add-only >> "$lock"
+          echo "added lock point (add-only): $rel @ ${head:0:8}"
+        fi
+      fi
+    done
+    ;;
+  status)
+    paths=$(locked_paths)
+    [[ -n "$paths" ]] || { echo "no tests are locked"; exit 0; }
+    while IFS= read -r rel; do
+      points=$(lines_for "$rel" | cut -f2 | cut -c1-8 | paste -sd, -)
+      echo "locked ($(mode_of "$rel")): $rel @ $points"
+    done <<<"$paths"
+    ;;
+  check)
+    paths=$(locked_paths)
+    [[ -n "$paths" ]] || { echo "no tests are locked"; exit 0; }
+    failed=0
+    while IFS= read -r rel; do
+      commits=$(lines_for "$rel" | cut -f2)
+      if [[ "$(mode_of "$rel")" == add-only ]]; then
+        # shellcheck disable=SC2086
+        if out=$(python3 "$checker" check "$root" "$rel" $commits); then
+          echo "intact (add-only, $(wc -l <<<"$commits" | tr -d ' ') lock points): $rel"
+        else
+          echo "CHANGED (add-only): $rel" >&2
+          sed 's/^/  - /' <<<"$out" >&2
+          failed=1
+        fi
+      else
+        first=$(head -1 <<<"$commits")
+        if git -C "$root" diff --quiet "$first" -- "$rel"; then
+          echo "unchanged: $rel"
+        else
+          echo "CHANGED since lock ${first:0:8}: $rel" >&2
+          failed=1
+        fi
+      fi
+    done <<<"$paths"
+    exit "$failed"
+    ;;
+  unlock)
+    if [[ $# -eq 0 ]]; then
+      rm -f "$lock"
+      echo "all test locks removed"
+      exit 0
+    fi
+    [[ -s "$lock" ]] || { echo "no tests are locked"; exit 0; }
+    for f in "$@"; do
+      rel=$(relpath "$f")
+      if cut -f1 "$lock" | grep -Fxq "$rel"; then
+        awk -F'\t' -v rel="$rel" '$1 != rel' "$lock" > "$lock.tmp" && mv "$lock.tmp" "$lock"
+        echo "unlocked: $rel"
+      else
+        echo "not locked: $rel" >&2
+      fi
+    done
+    ;;
+  *)
+    echo "usage: test-lock lock <file>... | status | check | unlock [<file>...]" >&2
+    exit 2
+    ;;
+esac
