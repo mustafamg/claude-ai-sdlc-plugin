@@ -50,5 +50,7 @@ Show the draft and fix it with the user until they're happy. Then:
 1. Branch off the default branch as `docs/intent-<slug>`, and commit only the intent file.
 2. Open a PR titled `docs(intent): <title>`. The body summarizes the problem, key evidence, and the
    decisions needed.
-3. **Never merge it.** Merging the PR is the product-owner approval. The approver also sets
-   `Status: accepted`. The next step is `/sdlc-kit:new-spec`.
+3. **Never merge it.** Merging the PR is the product-owner approval.
+
+Then run `/sdlc-kit:review-intent intent/<folder>`. It closes out the open questions, records the
+decisions, and sets the status, so the approver has a complete file to merge.

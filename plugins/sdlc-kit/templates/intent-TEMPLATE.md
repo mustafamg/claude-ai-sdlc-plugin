@@ -2,8 +2,9 @@
 
 - **Author:** <name>
 - **Date:** YYYY-MM-DD
-- **Status:** draft | accepted | rejected | superseded
+- **Status:** draft | accepted | deferred | rejected | superseded
 - **Approved by:** <product owner, once accepted>
+- **Revisit:** <YYYY-MM and who, when deferred>
 
 ## Problem
 What is wrong or missing today, and who feels it? Include evidence (user reports, metrics, logs, code
@@ -34,4 +35,8 @@ What we are deliberately *not* doing.
 Each with a proposed answer, so the approver can say "yes" or "no, because…".
 
 ## Decisions
-(Filled in during review: each open question's resolution, with date and who decided.)
+Filled in by `/sdlc-kit:review-intent`. One row per question: the question, its
+resolution (decided / deferred to spec / out of scope / needs <name>), who decided, and the date.
+
+| Question | Resolution | Who | Date |
+|---|---|---|---|

@@ -8,15 +8,18 @@ approved by merging its PR.
 
 1. **Intent (Stage 1, Plan).** Run `/sdlc-kit:new-intent <your idea>`. It interviews you, checks the
    code for evidence, drafts `intent.md` from [`_TEMPLATE.md`](_TEMPLATE.md), and opens a PR.
-   Merging it is product-owner approval. Mark it `Status: accepted`.
-2. **Spec (Stage 2, Design).** Run `/sdlc-kit:new-spec intent/<folder>`. It writes `spec.md`
+2. **Review (Stage 1).** Run `/sdlc-kit:review-intent intent/<folder>`. It finds the gaps the draft
+   leaves, resolves every open question with you, records them in the Decisions table, and sets
+   `Status` to `accepted`, `deferred` (with a Revisit month), or `rejected`. Merging the PR is the
+   product-owner approval. `/sdlc-kit:review-intent backlog` lists deferred intents that are due.
+3. **Spec (Stage 2, Design).** Run `/sdlc-kit:new-spec intent/<folder>`. It writes `spec.md`
    (numbered requirements, Given/When/Then acceptance criteria, and design), applies the project's
    policy skills, and flags conflicts for the owners to resolve. It tells you when a spec isn't needed
    (e.g. tooling or CI).
-3. **Plan (Stage 3).** Run `/sdlc-kit:new-plan intent/<folder>`. It works in plan mode, checks the spec
+4. **Plan (Stage 3).** Run `/sdlc-kit:new-plan intent/<folder>`. It works in plan mode, checks the spec
    against current code, and drafts `plan.md`: a traceability table (acceptance criterion → test →
    step), files, ordered steps, risks, policy compliance, and verification.
-4. **Build and test (Stages 3–4).** Run `/sdlc-kit:build intent/<folder> <step>` (or `next`) for each
+5. **Build and test (Stages 3–4).** Run `/sdlc-kit:build intent/<folder> <step>` (or `next`) for each
    step:
    1. It writes the step's acceptance tests from the spec and confirms they fail for the right reason.
    2. It commits and **locks** them. Python test files are locked add-only; other files are locked
@@ -25,7 +28,7 @@ approved by merging its PR.
    4. The `verifier` subagent checks the step independently.
 
    `/sdlc-kit:build intent/<folder> finish` verifies everything and opens the PR with the evidence.
-5. **Review and deploy (Stage 5).** Review the PR, collect the sign-offs it lists, merge it, then run
+6. **Review and deploy (Stage 5).** Review the PR, collect the sign-offs it lists, merge it, then run
    `/sdlc-kit:deploy`.
 
 Small fixes (typos, one-line bugs, dependency bumps) skip this and go straight to a PR.

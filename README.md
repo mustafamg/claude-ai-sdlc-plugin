@@ -6,8 +6,9 @@ at every stage. A human approves between stages by merging a PR. Rules that must
 hooks, not just requested in prompts.
 
 ```
-idea ─► intent.md ─► spec.md ─► plan.md ─► test-first build ─► verified PR ─► gated deploy
-       /new-intent  /new-spec  /new-plan   /build (per step)   /build finish   /deploy
+idea ─► intent.md ──────► spec.md ─► plan.md ─► test-first build ─► verified PR ─► gated deploy
+       /new-intent        /new-spec  /new-plan   /build (per step)   /build finish   /deploy
+       /review-intent
 ```
 
 ## What's inside
@@ -16,6 +17,7 @@ idea ─► intent.md ─► spec.md ─► plan.md ─► test-first build ─�
 |---|---|---|
 | `/sdlc-kit:init` | Setup | Scaffolds a project: `CLAUDE.md` sections, `intent/` templates, `.gitignore`, protected paths, starter policy skills, and optionally a runbook and team settings. |
 | `/sdlc-kit:new-intent <idea>` | 1 Plan | Interviews you, gathers evidence from the code (verified vs. assumed), and drafts `intent.md`. |
+| `/sdlc-kit:review-intent [folder]` | 1 Plan | Finds the gaps a draft intent leaves, resolves every open question with you, records the Decisions table, and sets the status to accepted, deferred (with a revisit month) or rejected. It never merges: that's still the human's approval. |
 | `/sdlc-kit:new-spec <folder>` | 2 Design | Writes numbered requirements, Given/When/Then acceptance criteria, and a design. Applies the project's policy skills, flags conflicts, and says when no spec is needed. |
 | `/sdlc-kit:new-plan <folder>` | 3 Plan | Works in plan mode. Checks the spec against the code and writes `plan.md`: an acceptance criterion → test → step table, ordered steps, lanes, risks, and verification. |
 | `/sdlc-kit:build <folder> [step\|next\|finish]` | 3–4 Build/Test | Test-first, one step at a time: tests from the spec, confirm they fail for the right reason, lock them, code until green, run checks, commit, verify. Resumes half-done steps and supports parallel lanes. `finish` opens the PR with evidence. |

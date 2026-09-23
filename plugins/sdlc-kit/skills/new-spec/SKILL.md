@@ -15,13 +15,15 @@ must do and how it behaves, not which files change.
 
 ## 1. Gate
 - The intent must be **merged to the default branch** with `Status: accepted`. If it isn't, stop and
-  say so.
+  say so: a `draft` needs `/sdlc-kit:review-intent`, a `deferred` intent names the month it's revisited
+  and needs a human to accept it first, and a `rejected` one needs a new intent.
 - **Decide if a spec is needed.** Skip it when the change has no user-facing behavior, no API or data
   contract, and no policy surface (e.g. CI or tooling). In that case, say "go straight to
   `/sdlc-kit:new-plan`", explain why, suggest recording that decision in the intent, and stop.
 
 ## 2. Load context and policies
-- Read `CLAUDE.md`, the intent (including its Decisions section), and any linked evidence.
+- Read `CLAUDE.md`, the intent (including its Decisions section), and any linked evidence. Every
+  decision marked **deferred to spec** is a question this spec must answer.
 - **Load every policy skill:** skills in the project's `.claude/skills/` (or installed plugins) whose
   description starts with `Policy -`. Apply them while designing, not as a check afterwards.
 - If no policy covers an area the feature touches (e.g. security, brand, UX, cost), note that in the
