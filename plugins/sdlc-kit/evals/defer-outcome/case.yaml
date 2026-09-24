@@ -1,0 +1,39 @@
+schema_version: "1.1"
+name: defer-outcome
+description: A sound but not-now intent should be deferred with a revisit month, not rejected.
+tags: [behavior]
+runs: 2
+
+execution:
+  prompt: |
+    Can you review intent/2026-02-02-guest-access/intent.md? The idea is right and I want to
+    keep it, but we can't take it on this quarter — the team is full until the billing work lands.
+  max_turns: 12
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill]
+
+context:
+  scaffold_script: setup.sh
+
+graders:
+  - name: review-intent-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(?:sdlc-kit:)?review-intent"'
+    min: 1
+    weight: 1.0
+
+  - name: defers-with-a-revisit-month
+    type: llm
+    focus: last_message
+    weight: 3.0
+    criteria: |
+      The user says the intent is sound but can't be worked on this quarter.
+
+      PASS if the response treats this as deferring the intent — proposing or asking to set
+      `Status: deferred` (or plainly describing it as deferred / parked / in the backlog rather than
+      rejected) — AND asks for, or proposes, a revisit month and/or who revisits it.
+
+      FAIL if the response rejects the intent, marks it accepted, closes it as not-doing, leaves the
+      status alone without raising the deferred option, or defers with no revisit date and no
+      question about one.

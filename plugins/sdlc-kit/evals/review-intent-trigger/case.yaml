@@ -1,0 +1,56 @@
+schema_version: "1.1"
+name: review-intent-trigger
+description: A drafted intent with open questions should route to review-intent, not new-intent.
+tags: [trigger]
+runs: 3
+
+execution:
+  prompt: |
+    Have a look at intent/2026-02-02-guest-access/intent.md. It's a draft and I'd like to get
+    it settled — there are a few open questions on it that we need to close out.
+  max_turns: 12
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill]
+
+context:
+  scaffold_script: setup.sh
+
+graders:
+  - name: review-intent-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(?:sdlc-kit:)?review-intent"'
+    min: 1
+    weight: 2.0
+
+  - name: new-intent-not-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(?:sdlc-kit:)?new-intent"'
+    min: 0
+    max: 0
+    weight: 1.0
+
+  - name: runs-a-real-intent-review
+    type: llm
+    focus: last_message
+    weight: 2.0
+    criteria: |
+      The intent lists three open questions (link expiry, guest comment vs read-only, audit trail).
+      It also has weaknesses it does not list: evidence marked **assumed**, a desired outcome too
+      vague to test ("easy and safe"), and an empty out-of-scope section.
+
+      PASS only if ALL THREE hold:
+      1. It puts questions to the user with a recommendation or proposed answer for each, rather
+         than settling them on its own authority.
+      2. It raises at least one weakness the intent does not itself list — the assumed evidence, the
+         untestable "easy and safe" outcome, the empty out-of-scope section, a missing constraint,
+         or an uncovered policy surface.
+      3. It is honest about evidence: it does not claim to have verified an assumed claim that
+         nothing in the workspace could confirm.
+
+      FAIL if any of the three is missing, or if it drafts a spec or implementation plan, writes
+      code, or declares the intent approved or rejected on its own authority.
+
+      Do NOT require a wrap-up. Stopping to ask the first batch of questions is correct behavior
+      here, and a response that ends on questions can still pass.
