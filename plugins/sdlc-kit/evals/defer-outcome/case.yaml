@@ -30,10 +30,18 @@ graders:
     criteria: |
       The user says the intent is sound but can't be worked on this quarter.
 
-      PASS if the response treats this as deferring the intent — proposing or asking to set
-      `Status: deferred` (or plainly describing it as deferred / parked / in the backlog rather than
-      rejected) — AND asks for, or proposes, a revisit month and/or who revisits it.
+      PASS if BOTH hold:
+      1. It treats the intent as deferred rather than rejected or accepted. Any of these count:
+         proposing `Status: deferred`, referring to "the deferred status", or plainly describing the
+         intent as deferred, parked, or going to the backlog. The exact string `Status: deferred`
+         is NOT required.
+      2. It asks for, or proposes, a revisit month (a `YYYY-MM` style date or a named month) and/or
+         who revisits it. A question asking the user for that month counts — it does not have to
+         supply one itself.
+
+      The response may spend most of its length on other gaps in the intent, and may end on
+      questions. That does not affect the verdict: judge only the two points above.
 
       FAIL if the response rejects the intent, marks it accepted, closes it as not-doing, leaves the
-      status alone without raising the deferred option, or defers with no revisit date and no
-      question about one.
+      status alone without raising deferral, or defers with no revisit month and no question about
+      one.

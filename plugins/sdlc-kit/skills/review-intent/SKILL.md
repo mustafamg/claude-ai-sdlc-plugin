@@ -56,8 +56,13 @@ Never mark something decided because the user didn't object, and never invent an
 question out.
 
 ## 4. Agree the outcome
-Summarize: what changed in the intent, what was decided, and what's still open. Then ask the user
-which outcome they want. Never pick it yourself.
+**If the user already signalled the outcome** ("not this quarter", "we're not doing this", "this is
+good, let's go"), say so back in your first reply and ask for what that outcome needs — for a
+deferral, the revisit month and who revisits — rather than waiting until the questions are done. A
+stated intention that never gets recorded is how a deferral turns into a forgotten file.
+
+Otherwise, once the questions are resolved, summarize: what changed in the intent, what was decided,
+and what's still open. Then ask the user which outcome they want. Never pick it yourself.
 - **accepted** — ready to build. Every question is decided, deferred to spec, or out of scope.
 - **deferred** — the intent is sound, but not now. Requires a **Revisit** month (`YYYY-MM`) and the
   person who revisits it. Merging it as `deferred` is how it enters the backlog.

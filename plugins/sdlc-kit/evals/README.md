@@ -7,7 +7,7 @@ description change on either one can make the wrong skill fire.
 ## Running
 
 ```bash
-claude plugin eval plugins/sdlc-kit --scaffold --model claude-sonnet-5
+claude plugin eval plugins/sdlc-kit --scaffold --model claude-sonnet-5 --judge-model claude-sonnet-5
 ```
 
 - **`--scaffold` is required.** Three cases build their workspace with a `setup.sh` that copies
@@ -16,6 +16,9 @@ claude plugin eval plugins/sdlc-kit --scaffold --model claude-sonnet-5
 - **Cases cost money.** Each one also runs a no-plugin baseline arm, and the `llm` graders call a
   judge model. The whole suite is roughly $2 on Sonnet. Add `--max-cost-usd` for a hard ceiling.
 - `--tag trigger` runs just the routing cases; `--tag behavior` runs the rest.
+- **Grade with Sonnet.** The default judge is Haiku, and it produced a unanimous false FAIL on a
+  `defer-outcome` response that plainly deferred the intent and asked for the revisit month. The
+  judged criteria here need a judge that reads a whole answer carefully.
 - Needs a recent CLI. Older builds report `plugin eval is currently in early access`.
 - Results land in `results/`, which is gitignored.
 
