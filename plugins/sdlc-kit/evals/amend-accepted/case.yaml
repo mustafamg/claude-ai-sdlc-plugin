@@ -1,0 +1,50 @@
+schema_version: "1.1"
+name: amend-accepted
+description: An accepted intent proven wrong by the spec gets amended, not re-reviewed or re-statused.
+tags: [behavior]
+runs: 3
+
+execution:
+  prompt: |
+    Our intent/2026-02-02-guest-access/intent.md says idle guest sessions are purged from our session
+    tables after 60 days. Writing the spec, I found guest boards aren't stored in our tables at all —
+    they live in the third-party provider, keyed by guest id — so that purge would delete nothing.
+    The intent needs to say so.
+  max_turns: 16
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill]
+
+context:
+  scaffold_script: setup.sh
+
+graders:
+  - name: review-intent-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?(?:sdlc-kit:)?review-intent"'
+    min: 1
+    weight: 1.0
+
+  - name: amends-without-restatusing
+    type: llm
+    focus: last_message
+    weight: 3.0
+    criteria: |
+      The intent is already `Status: accepted`. The spec proved one constraint wrong, so this is an
+      amendment to an approved document.
+
+      This response may well be the first turn of an interview that stops to ask questions before
+      editing anything. That is correct behavior: judge only the invariants below, and do not require
+      a finished plan, a described diff, or a named branch in this message.
+
+      PASS if ALL THREE hold:
+      1. It treats this as a correction to an already-accepted intent rather than a fresh review: it
+         does not propose reverting `Status` to draft, does not re-run approval of the whole intent,
+         and does not re-interview the three questions the Decisions table already settles.
+      2. It has not silently rewritten the file: either it hasn't edited yet (asking first), or it
+         says what it changed and that the old wording is preserved or marked.
+      3. It doesn't overstep: no claim to have merged anything, approved anything itself, or changed
+         `Status`, and it doesn't start writing the spec or code.
+
+      FAIL if it restatuses the intent, treats it as a draft needing full re-review, silently
+      overwrites the constraint and reports it as done, or claims a merge.

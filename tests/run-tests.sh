@@ -160,6 +160,30 @@ bashcmd 2 "agent unlock via legacy .sh name" ".claude/hooks/test-lock.sh unlock"
 bashcmd 2 "rm the lock file by path" "rm .claude/test-lock"
 bashcmd 0 "status via test-lock" "test-lock status"
 bashcmd 0 "prose mentioning test-lock and unlocking" "git commit -m 'explain how humans unlock tests'"
+
+echo "== test-lock guard: Bash (data is not execution)"
+bashcmd 0 "grep the lock file" "grep -c . .claude/test-lock"
+bashcmd 0 "cat the lock file" "cat .claude/test-lock"
+bashcmd 0 "grep the guard's own source" "grep -n 'claude/test-lock' $KIT/hooks/test-lock-guard.sh"
+bashcmd 0 "commit message naming the lock path" "git commit -m 'docs: the state file is .claude/test-lock, never committed'"
+bashcmd 0 "commit message quoting the unlock command" "git commit -m 'docs: humans run \"\$KIT/bin/test-lock\" unlock <file> themselves'"
+bashcmd 0 "heredoc documenting the unlock command" "cat > docs/locks.md <<'EOF'
+Only humans unlock: \"<plugin path>/bin/test-lock\" unlock <file>
+The state lives in .claude/test-lock and is gitignored.
+EOF"
+bashcmd 0 "commit message from a heredoc naming the lock path" "git commit -q -F - <<'EOF'
+chore: adopt the plugin
+
+The lock keeps using .claude/test-lock, so existing locks stay visible.
+EOF"
+bashcmd 0 "python script that writes docs about unlocking" "python3 /tmp/write_docs.py  # writes 'test-lock unlock' into a README"
+bashcmd 2 "unlock inside bash -c is still blocked" "bash -c '$KIT/bin/test-lock unlock $T'"
+bashcmd 2 "redirect into the lock file is still blocked" "echo junk > .claude/test-lock"
+bashcmd 2 "truncate of the lock file is still blocked" "truncate -s0 .claude/test-lock"
+bashcmd 2 "git checkout of the lock file is still blocked" "git checkout HEAD -- .claude/test-lock"
+bashcmd 2 "write to a locked test inside a heredoc-bearing command is still blocked" "sed -i '' s/1/2/ $T; cat <<'EOF'
+done
+EOF"
 out=$(jq -cn --arg p "$SP/$T" '{tool_name:"Edit",tool_input:{file_path:$p,old_string:"assert 1 == 1",new_string:"assert True"}}' | "$G" 2>&1)
 [[ "$out" == *"$KIT/bin/test-lock\" unlock"* ]]; expect 0 "block message prints the exact unlock path" "$?"
 

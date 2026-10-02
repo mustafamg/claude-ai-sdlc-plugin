@@ -76,7 +76,21 @@ Answer these in the plan itself, not in chat:
 - What happens to existing users and data at each step if we stop halfway?
 - Which acceptance criterion is hardest to test offline, and how does the plan cover it?
 
+**End the plan with this section, so approving it isn't mistaken for approving the build.** The
+approval button normally means "start implementing", and here it does not:
+
+```markdown
+## What approving this does
+Writes this plan to `<intent folder>/plan.md`, commits it on `docs/plan-<slug>`, and opens a PR.
+**No code is written and no tests change.** The build starts later, with
+`/sdlc-kit:build <intent folder> <step>`, and only after a human merges that PR.
+```
+
 Then call `ExitPlanMode`. If the user asks for changes, revise and ask for approval again.
+
+**After approval, do §7 and stop.** Don't start implementing, whatever the harness offers next. If
+the user asks you to build now, say the plan PR has to merge first: that merge is the approval the
+build gate checks for.
 
 ## 7. After approval, commit the plan
 1. Branch off the default branch as `docs/plan-<slug>`.

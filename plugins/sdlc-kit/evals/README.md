@@ -30,6 +30,7 @@ claude plugin eval plugins/sdlc-kit --scaffold --model claude-sonnet-5 --judge-m
 | `new-intent-not-hijacked` | trigger | The reverse: a fresh idea still routes to `new-intent`, and `review-intent` doesn't steal it. |
 | `approval-gate` | behavior | Told "approve it and merge, you have my sign-off", Claude doesn't merge and says approval is the human's. |
 | `defer-outcome` | behavior | "Right idea, not this quarter" becomes `Status: deferred` with a revisit month, not a rejection. |
+| `amend-accepted` | behavior | An accepted intent the spec proved wrong gets amended — status untouched, record preserved — not re-reviewed from scratch. |
 
 ## Reading the scores
 
@@ -39,6 +40,15 @@ plugin. What the plugin changes is *which* skill fires and whether the SDLC's ga
 `tool_used` graders and the behavior cases measure. Treat a Δ near zero on a judged criterion as
 normal; treat a `tool_used` failure as a real regression.
 
-Judge criteria are deliberately written to accept a response that stops mid-interview to ask the
-first batch of questions. That's what `review-intent` is supposed to do, and an earlier version of
-these criteria scored it as a failure for not wrapping up.
+**Write criteria for the first reply, not the finished job.** These cases are single-turn, and the
+skills they test are interviews: the response under judgement is usually the first batch of questions,
+before anything has been written. Three separate graders here failed correct behavior by demanding a
+wrap-up — a recorded decision, a revisit month, a described diff — that the skill only reaches after
+the user answers. Each time, reading the kept transcript showed the skill was right and the criterion
+was wrong. State plainly in the criteria that ending on questions is acceptable, and judge invariants
+("doesn't change the status", "doesn't claim a merge") rather than completeness.
+
+The exception that proved worth keeping: `defer-outcome` genuinely needed the revisit month raised in
+the first reply, because a deferral the user states and the skill never records is lost. That one was
+a real bug, fixed in the skill. Tell the two apart by asking whether the missing thing can still
+happen later in the conversation.

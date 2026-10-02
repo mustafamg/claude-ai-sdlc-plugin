@@ -1,6 +1,6 @@
 ---
 name: review-intent
-description: Review a drafted intent.md for gaps, resolve every open question with the user, and record the decisions so a human can approve it by merging (Stage 1 of the AI-native SDLC). Use when someone asks to review, resolve, sign off, defer, or reject an intent, or asks what's blocking one. Do NOT use to draft a new intent (/sdlc-kit:new-intent), to design one (/sdlc-kit:new-spec), or to review code.
+description: Review a drafted intent.md for gaps, resolve every open question with the user, and record the decisions so a human can approve it by merging (Stage 1 of the AI-native SDLC). Use when someone asks to review, resolve, sign off, defer, or reject an intent, to amend an intent that's already accepted, or asks what's blocking one. Do NOT use to draft a new intent (/sdlc-kit:new-intent), to design one (/sdlc-kit:new-spec), or to review code.
 argument-hint: "[intent folder | backlog]"
 ---
 
@@ -23,7 +23,26 @@ has a PR, read it and its review comments (`gh pr view --comments`); decisions a
 end up in the file. Load the project's policy skills (those whose description starts with `Policy -`)
 to know which surfaces need an owner's answer.
 
-## 2. Find the gaps
+## 2. Amendment mode: the intent is already accepted
+If the intent is on the default branch with `Status: accepted` (or `deferred`/`rejected`), this is an
+**amendment**, not a first review. That is the normal case: `/sdlc-kit:new-spec` or
+`/sdlc-kit:new-plan` found that the intent contradicts the code, or a decision turned out wrong
+during the build.
+
+- **Ask what forced the change,** and name the artifact that found it — a spec requirement, a plan
+  step, a build step — with a link, so the reason outlives the conversation.
+- **Don't change `Status`.** An accepted intent stays accepted; an amendment doesn't put the whole
+  intent back up for approval. If the change is big enough to need re-approval, say so and let the
+  user decide.
+- **Keep the original wording, struck through** (`~~like this~~`), with the new wording beside it,
+  and add a dated amendment note. The template's Decisions section explains the convention. Never
+  overwrite silently: a reader has to see what changed and why.
+- **Add a Decisions row per change:** what changed, what forced it, who decided, the date.
+- **Branch `docs/intent-<slug>-amend-<topic>`,** commit the intent alone, and open a PR titled
+  `docs(intent): amend <slug> — <what changed>`. Never merge it.
+- Then work only the questions the amendment reopens. Don't re-interview what's already settled.
+
+## 3. Find the gaps
 The listed open questions are the easy half. Review the whole intent for what it doesn't say:
 - **Assumed claims.** Anything marked *assumed* that a cheap read-only check could settle: run it, and
   mark the claim *verified* with what you ran. Never read real `.env*` files.
@@ -42,7 +61,7 @@ The listed open questions are the easy half. Review the whole intent for what it
 Add each gap to the list to resolve, with your proposed answer. Report gaps you can't resolve as new
 open questions rather than answering them yourself.
 
-## 3. Resolve, with the user
+## 4. Resolve, with the user
 Ask 3–5 questions at a time, each with your recommendation, so the user can say "yes" or "no,
 because…". Keep going until every question has one of these resolutions:
 - **Decided** — the answer, in the user's words.
@@ -55,7 +74,7 @@ because…". Keep going until every question has one of these resolutions:
 Never mark something decided because the user didn't object, and never invent an answer to close a
 question out.
 
-## 4. Agree the outcome
+## 5. Agree the outcome
 **If the user already signalled the outcome** ("not this quarter", "we're not doing this", "this is
 good, let's go"), say so back in your first reply and ask for what that outcome needs — for a
 deferral, the revisit month and who revisits — rather than waiting until the questions are done. A
@@ -69,14 +88,16 @@ and what's still open. Then ask the user which outcome they want. Never pick it 
 - **rejected** — we're not doing this. Record why.
 - **still draft** — blocked on someone, or the user wants more work first. Say exactly what's needed.
 
-## 5. Write the intent
+## 6. Write the intent
+*In amendment mode (§2), keep `Status` as it is and strike through what you replace.*
+
 - Fill the **Decisions** table: each question, its resolution, who decided, and the date.
 - Set **Status**, and **Approved by** (or **Revisit**, when deferred).
 - Keep the rest of the file true: if a decision changes scope, constraints or non-goals, edit those
   sections too and note the change in Decisions. Never leave a decision that contradicts the body.
 - Verified claims lose their *assumed* marker, and gain the evidence.
 
-## 6. Commit, after the user confirms
+## 7. Commit, after the user confirms
 Show the full diff and **ask before committing**. Once they confirm:
 1. If the intent has an open PR, commit to its branch (`docs/intent-<slug>`) and push. Otherwise
    branch off the default branch and open one, titled `docs(intent): <title>`.

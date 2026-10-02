@@ -36,26 +36,60 @@ mode_of() {
 
 if [[ "$tool" == "Bash" ]]; then
   cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
-  if grep -Eq 'test-lock(\.sh)?["'"'"']?[[:space:]]+unlock' <<<"$cmd"; then
+  # Scan what the command would RUN, not every string it contains. Text the shell only carries as
+  # data is dropped first, so writing docs, scripts or commit messages that describe the lock and
+  # the unlock command is never blocked:
+  #   - heredoc bodies (`cat > f <<EOF ... EOF`, `git commit -F - <<EOF ... EOF`);
+  #   - comments, from an unquoted `#` to end of line;
+  #   - quoted arguments to -m/--message/-F/--file (commit and tag messages).
+  # Quoted arguments to -c are deliberately kept, so `bash -c "... unlock ..."` is still caught.
+  scan=$(awk '
+    # Drop a trailing comment: an unquoted `#` that starts a word. A `#` inside quotes, or mid-word
+    # as in a URL fragment or `fix#12`, is kept.
+    function uncomment(s,   i, c, prev, q, out) {
+      q = ""; prev = ""; out = ""
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1)
+        if (q == "") {
+          if (c == "\047" || c == "\042") q = c
+          else if (c == "#" && (i == 1 || prev == " " || prev == "\t")) break
+        } else if (c == q) q = ""
+        out = out c; prev = c
+      }
+      return out
+    }
+    inhd { if ($0 ~ "^[[:space:]]*" tag "[[:space:]]*$") inhd = 0; next }
+    {
+      if (match($0, /<<-?[[:space:]]*[\047\042]?[A-Za-z_][A-Za-z0-9_]*[\047\042]?/)) {
+        t = substr($0, RSTART, RLENGTH)
+        gsub(/^<<-?[[:space:]]*[\047\042]?|[\047\042]?$/, "", t)
+        tag = t; inhd = 1
+      }
+      print uncomment($0)
+    }' <<<"$cmd" |
+    sed -E "s/(-m|--message|-F|--file)([[:space:]]+)'[^']*'/\1\2MSG/g; s/(-m|--message|-F|--file)([[:space:]]+)\"[^\"]*\"/\1\2MSG/g")
+
+  if grep -Eq 'test-lock(\.sh)?["'"'"']?[[:space:]]+unlock' <<<"$scan"; then
     block "agents can't unlock tests."
   fi
-  # The lock file's path (`.claude/test-lock`), but not the words "test-lock" in prose such as
-  # commit messages. Removing the lock by a bare name after `cd .claude` isn't caught here; the
-  # verifier reports a missing lock on a branch with test commits.
-  if grep -Eq '\.claude/test-lock($|[^A-Za-z0-9_.-])' <<<"$cmd"; then
+  # Block only a command that WRITES to the lock file. Reading it (cat, grep, git log) is fine, and
+  # so is naming its path in prose. Removing the lock by a bare name after `cd .claude` isn't caught
+  # here; the verifier reports a missing lock on a branch with test commits.
+  verbs='sed[[:space:]]+-i|perl[[:space:]]+-i[^[:space:]]*|\btee\b|\bmv\b|\bcp\b|\brm\b|\btruncate\b|\bdd\b|\bpatch\b|git[[:space:]]+(checkout|restore|reset|stash|apply|am|cherry-pick|revert|rm|mv)\b'
+  lockpath='\.claude/test-lock'
+  if grep -Eq ">{1,2}[[:space:]]*[\"']?[^[:space:]\"';|&]*${lockpath}|(${verbs})[^|;&]*${lockpath}" <<<"$scan"; then
     block "the lock file can only be changed through test-lock."
   fi
   [[ -s "$lock" ]] || exit 0
   # Block only when a locked file is the TARGET of a write: a redirect pointing at it, or a write
   # command with it as an argument in the same command segment. Naming the file is fine: commit
   # messages, `cat`, test runs, and redirects to other files all pass.
-  verbs='sed[[:space:]]+-i|perl[[:space:]]+-i[^[:space:]]*|\btee\b|\bmv\b|\bcp\b|\brm\b|\btruncate\b|\bdd\b|\bpatch\b|git[[:space:]]+(checkout|restore|reset|stash|apply|am|cherry-pick|revert|rm|mv)\b'
   while IFS= read -r rel; do
     base=$(basename "$rel")
     esc=${base//./\\.}
     redirect=">{1,2}[[:space:]]*[\"']?[^[:space:]\"';|&]*${esc}"
     targeted="(${verbs})[^|;&]*${esc}"
-    if grep -Eq "$redirect|$targeted" <<<"$cmd"; then
+    if grep -Eq "$redirect|$targeted" <<<"$scan"; then
       block "this command looks like it writes to the locked file $rel. To add tests to an add-only locked test file, use the Edit tool."
     fi
   done < <(cut -f1 "$lock" | awk '!seen[$0]++')

@@ -33,6 +33,7 @@ must do and how it behaves, not which files change.
 Read the code the intent touches: routes, models, UI, and the contracts between services. Mark each
 claim about current behavior as **verified** or **assumed**. Never read real `.env*` files. If you
 find the intent contradicts the code, flag it; the fix is an intent amendment, not a silent change.
+Run `/sdlc-kit:review-intent <intent folder>`, which has an amendment mode for an accepted intent.
 
 ## 4. Ask before guessing
 Interview the user, 3–5 questions at a time, about gaps the intent leaves open: edge cases, error

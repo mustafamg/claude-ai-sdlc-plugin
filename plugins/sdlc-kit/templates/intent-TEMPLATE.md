@@ -40,3 +40,16 @@ resolution (decided / deferred to spec / out of scope / needs <name>), who decid
 
 | Question | Resolution | Who | Date |
 |---|---|---|---|
+
+**Amending this intent after it's accepted.** The spec or the plan will sometimes prove part of this
+file wrong. When that happens, don't overwrite it:
+
+- strike the original wording (`~~a 60-day purge of idle sessions~~`) and put the new wording beside
+  it, so the change is visible in place;
+- mark it `(Amended YYYY-MM-DD: <what changed and what forced it>)`, naming the spec section, plan
+  step or PR that found the problem;
+- add a row here for each amendment;
+- leave `Status` alone. An amendment doesn't re-run approval of the whole intent.
+
+A struck-through line that turned out to be wrong is more useful to the next reader than a clean file
+that hides the correction.
