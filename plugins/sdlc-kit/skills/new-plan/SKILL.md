@@ -22,6 +22,9 @@ Stop and say why if any of these fail:
 - For a story: it's in the intent's Stories list and not struck through.
 - `<work folder>/spec.md` is on the default branch, **or** the intent records that no spec is needed.
   In that case, the intent's Decisions section takes the spec's place.
+- Nothing in the spec still needs a decision: its **Needs a decision** list is empty (in an older
+  spec, every conflict and business question records a decision). An open one goes back to whoever
+  the spec says decides it, as a spec amendment in its own PR.
 - **Dependencies are met:** `intents deps <work folder>` exits 0. It checks the intent's
   **Depends on** and the story's `After:`, pull requests included. If the Constraints still describe a
   dependency in prose, check that against reality too (`gh pr view`, `git log`), and suggest writing

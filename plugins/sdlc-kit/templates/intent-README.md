@@ -21,9 +21,10 @@ intent takes. Its name without a date is the slug that branches and commits use.
    product-owner approval. `/sdlc-kit:review-intent backlog` lists deferred intents that are due and
    promised work nobody has written yet.
 3. **Spec (Stage 2, Design).** Run `/sdlc-kit:new-spec <work folder>`. It writes `spec.md`
-   (numbered requirements, Given/When/Then acceptance criteria, and design), applies the project's
-   policy skills, and flags conflicts for the owners to resolve. It tells you when a spec isn't needed
-   (e.g. tooling or CI).
+   in two parts: one for the product owner (what users get, how they'll know it works, the
+   decisions they need to make, non-goals), then the engineering detail (numbered requirements, Given/When/Then acceptance
+   criteria, and design). It applies the project's policy skills and flags conflicts for the owners
+   to resolve. It tells you when a spec isn't needed (e.g. tooling or CI).
 4. **Plan (Stage 3).** Run `/sdlc-kit:new-plan <work folder>`. It works in plan mode, checks the spec
    against current code, and drafts `plan.md`: a traceability table (acceptance criterion → test →
    step), files, ordered steps, risks, policy compliance, and verification.
