@@ -35,6 +35,9 @@ What it reads:
     -> follow-up: <slug>   (or the arrow →). The slug stays reserved until an intent or story uses it.
   A ref is a slug (an intent folder's name without its date, or a story's slug), a story id (S2) of
   the same intent, or #N (a pull request or issue, checked with gh).
+  Keywords stay in English. A `## ` heading that isn't one of the template's, a header or story field
+  intents doesn't know, and Eastern Arabic-Indic digits or `،` in a structural line get a warning,
+  since a translated keyword would otherwise be skipped without a word.
 
 Stages are derived, never declared: reserved; draft (the intent is only on a branch or in the working
 tree); the intent's Status; specced and planned (spec.md / plan.md on the default branch); building
@@ -65,6 +68,17 @@ MAX_STORIES = 5
 
 HEADER_FIELD = re.compile(r"^\s*[-*]\s+\*\*(?P<key>[^*:]+):\*\*\s*(?P<val>.*)$")
 STORIES_HEADING = re.compile(r"^##\s+stories\s*$", re.I)
+# The template's headings and the fields intents knows. Anything else is skipped, so a translated
+# keyword gets a warning naming the English ones.
+HEADINGS = ("Problem", "Desired outcome", "Where we are today", "Stories", "Users affected",
+            "Systems affected", "Constraints", "Out of scope", "Open questions", "Decisions", "Evidence")
+HEADER_FIELDS = ("Author", "Date", "Status", "Approved by", "Revisit", "Depends on", "Supersedes",
+                 "Review doc", "Language")
+STORY_FIELDS = ("Outcomes", "After", "Actors", "User story")
+STORY_REFS = re.compile(r"\b(?:After|Outcomes):")
+# Eastern Arabic-Indic digits and the Arabic comma, which intents doesn't read as 0-9 and `,`.
+ARABIC = re.compile("[٠-٩،]")
+TO_ASCII = str.maketrans("٠١٢٣٤٥٦٧٨٩،", "0123456789,")
 BULLET = re.compile(r"^ {0,3}[-*+]\s+")
 ITEM = re.compile(r"^ {0,3}(?:[-*+]|\d+[.)])\s+")
 STORY_HEADING = re.compile(r"^###\s+(?P<strike>~~)?(?P<sid>S\d+)\s+(?P<slug>[^\s:*~]+)(?P<rest>.*)$")
@@ -190,6 +204,22 @@ def parse_refs(val, line, ships=False):
     return refs, bad
 
 
+def arabic_digits(where, n, line):
+    """A warning, with the line's ASCII form, if a structural line has Arabic-Indic digits or `،`."""
+    if not ARABIC.search(line):
+        return []
+    return [warn(where, n, "Eastern Arabic-Indic digits and `،` aren't read as numbers or separators; "
+                           f"write `{line.strip().translate(TO_ASCII)}`")]
+
+
+def unknown_field(where, n, kind, name, known):
+    # Header fields are read in any case; `After:` only as written, so story fields must match exactly.
+    if (name.lower() in (k.lower() for k in known)) if kind == "header" else name in known:
+        return []
+    return [warn(where, n, f"the {kind} field {name!r} isn't one intents reads, so it's skipped. Keep "
+                           f"field names in English: {', '.join(known)}")]
+
+
 def parse_intent(folder, where, text):
     """An Intent read from its intent.md, and the problems found reading it."""
     it, probs = Intent(folder, where, normalize(folder)), []
@@ -202,14 +232,21 @@ def parse_intent(folder, where, text):
             section, current = ("stories" if STORIES_HEADING.match(line) else "body"), None
             if section == "stories":
                 it.stories_line, headed = n, False
+            elif line[3:].strip().lower() not in (h.lower() for h in HEADINGS):
+                probs.append(warn(where, n, f"`{line.strip()}` isn't one of the template's headings, so "
+                                            "it's read as text. Keep headings in English: "
+                                            f"{', '.join('## ' + h for h in HEADINGS)}"))
         elif section == "header":
             fm = HEADER_FIELD.match(line)
             if fm:
                 fields.append([fm.group("key").strip(), fm.group("val"), n])
+                probs += unknown_field(where, n, "header", fm.group("key").strip(), HEADER_FIELDS)
+                probs += arabic_digits(where, n, line)
             elif fields and line.strip() and not BULLET.match(line):
                 fields[-1][1] += " " + line.strip()  # a value wrapped onto the next line
         elif section == "stories" and line.startswith("### "):
             sm, current, headed = STORY_HEADING.match(line), None, True
+            probs += arabic_digits(where, n, line)
             if not sm:
                 probs.append(err(where, n, "can't read this story's heading: write `### S1 <story-slug>: "
                                            "<title>`"))
@@ -221,9 +258,16 @@ def parse_intent(folder, where, text):
         elif section == "stories" and headed:
             if current:  # every line up to the next heading belongs to the story
                 current[1] += "\n" + line
+                fm = HEADER_FIELD.match(line)
+                if fm:
+                    probs += unknown_field(where, n, "story", fm.group("key").strip(), STORY_FIELDS)
+                if STORY_REFS.search(line):
+                    probs += arabic_digits(where, n, line)
         elif section == "stories":
             if BULLET.match(line):
                 sm, current = STORY.match(line), None
+                if sm or STORY_REFS.search(line):
+                    probs += arabic_digits(where, n, line)
                 if not sm:
                     probs.append(err(where, n, "can't read this story: write `- **S1 <story-slug>**: "
                                                "what ships. Outcomes: 1, 2. After: S2.`"))
@@ -1056,6 +1100,9 @@ def cmd_hook():
 
 
 def main(argv):
+    for stream in (sys.stdout, sys.stderr):  # a Windows code page can't print `→` or Arabic
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     args, base = [], None
     it = iter(argv)
     for a in it:

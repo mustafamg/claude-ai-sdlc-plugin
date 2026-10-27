@@ -503,6 +503,132 @@ printf -- '\nWrite `a separate intent` for it.\n' >> intent/2026-01-02-beta/inte
 outn 0 "prose inside code" 'warning' "$I" check
 ireset
 
+echo "== intents check: translated keywords"
+# Heredocs, not subst: subst's python reads with the locale's encoding, which can't take Arabic everywhere.
+mkdir -p intent/2026-01-15-iota intent/2026-01-15-kappa intent/2026-01-15-lambda intent/2026-01-15-mu
+cat > intent/2026-01-15-iota/intent.md <<'EOF'
+# Intent: iota
+
+- **Author:** t
+- **Status:** accepted
+
+## Problem
+x
+
+## القصص
+### S1 i-one: The backend
+- **Outcomes:** 1
+EOF
+cat > intent/2026-01-15-kappa/intent.md <<'EOF'
+# Intent: kappa
+
+- **Author:** t
+- **Status:** accepted
+- **يعتمد على:** chat-login
+- **Language:** ar
+- **Review doc:** https://example.com/d
+
+## Problem
+x
+
+## Desired outcome
+1. x
+
+## stories
+### S1 k-one: The backend
+- **Outcomes:** ١، ٢
+
+### S2 k-two: The chat window
+- **بعد:** S1
+
+### S١ k-three: Chat window
+- **Outcomes:** 1
+
+## Out of scope
+- x
+EOF
+cat > intent/2026-01-15-lambda/intent.md <<'EOF'
+# Intent: lambda
+
+- **Author:** t
+- **Status:** accepted
+
+## Stories
+### S1 l-one: One
+- **Outcomes:** 1
+
+### S2 l-two: Two
+- **Outcomes:** 1
+
+### S3 l-three: Three
+- **After:** S1، S2
+EOF
+cat > intent/2026-01-15-mu/intent.md <<'EOF'
+# Intent: mu
+
+- **Author:** t
+- **Date:** 2026-01-15
+- **Status:** accepted
+- **Approved by:** t
+- **Language:** ar
+- **Review doc:** https://example.com/d
+
+## Problem
+## Desired outcome
+## Where we are today
+## stories
+### S1 mu-one: One
+- **Outcomes:** 1
+- **Actors:** t
+- **User story:** As a t, I want x, so y.
+
+### S2 mu-two: Two
+- **After:** S1
+## Users affected
+## Systems affected
+## Constraints
+## Out of scope
+## Open questions
+## Decisions
+## Evidence
+EOF
+K=intent/2026-01-15-kappa/intent.md
+outp 0 "a translated Stories heading warns" 'warning: intent/2026-01-15-iota/intent.md:9: .*## Stories' "$I" check intent/2026-01-15-iota/intent.md
+outn 0 "template headings in any case don't warn" 'heading' "$I" check intent/2026-01-15-mu/intent.md
+outp 0 "an unknown header field warns with the known list" "warning: $K:5: .*Author, Date, Status, Approved by, Revisit, Depends on, Supersedes, Review doc, Language" "$I" check $K
+outn 0 "Language and Review doc are known header fields" 'header field' "$I" check intent/2026-01-15-mu/intent.md
+outp 0 "an unknown story field warns with the story fields" "warning: $K:20: .*Outcomes, After, Actors, User story" "$I" check $K
+outp 0 "Arabic-Indic digits in a story heading warn" "warning: $K:22: .*### S1 k-three" "$I" check $K
+outp 0 "an Arabic comma in Outcomes warns" "warning: $K:17: .*1, 2" "$I" check $K
+outp 1 "an Arabic comma in After warns next to the error" 'warning: intent/2026-01-15-lambda/intent.md:14: .*S1, S2' "$I" check intent/2026-01-15-lambda/intent.md
+outp 1 "an Arabic comma in After is still an error" "error: intent/2026-01-15-lambda/intent.md:13: can't read 'S1" "$I" check intent/2026-01-15-lambda/intent.md
+outp 0 "the hook passes keyword warnings as context" 'additionalContext.*header field' ih "$(iwrite $K)"
+mkdir -p intent/2026-01-15-xi
+cat > intent/2026-01-15-xi/intent.md <<'EOF'
+# Intent: xi
+
+- **Author:** t
+- **Status:** accepted
+
+## Stories
+### S1 x-one: One
+- **Outcomes:** 1
+
+### S2 x-two: Two
+- **after:** S1
+EOF
+outp 0 "a lowercase story field warns, since After: is read only as written" 'warning: intent/2026-01-15-xi/intent.md:11: .*Outcomes, After, Actors, User story' "$I" check intent/2026-01-15-xi/intent.md
+mkdir -p intent/2026-01-15-nu
+sed 's/draft | accepted | deferred | rejected | superseded/draft/' "$KIT/templates/intent-TEMPLATE.md" > intent/2026-01-15-nu/intent.md
+outp 0 "the template's English keywords give no new output" 'no problems found' "$I" check intent/2026-01-15-nu/intent.md
+git add intent/2026-01-15-iota intent/2026-01-15-kappa && git commit -qm "docs(intent): translated keywords"
+outp 0 "a translated Stories heading is still read as one story" '2026-01-15-iota +accepted' "$I" status --base HEAD
+outn 0 "a story under a translated Stories heading is still not read" 'i-one' "$I" status --base HEAD
+outp 0 "a translated After still gives no dependencies" 'no dependencies' "$I" deps k-two --base HEAD
+outp 0 "a story id with Arabic-Indic digits is still read" 'k-three +accepted' "$I" status --base HEAD
+git reset -q --hard HEAD~1
+ireset
+
 echo "== intents hook (PostToolUse)"
 B=intent/2026-01-02-beta/intent.md
 outn 0 "a file outside intent/ is ignored" . ih "$(iedit README.md 'a separate intent')"
