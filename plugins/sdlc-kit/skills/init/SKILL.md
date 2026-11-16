@@ -12,6 +12,10 @@ committed on a branch for review. **Never overwrite an existing file.** Merge in
 and ask first. `--minimal` skips the optional steps (6–8), but never §8's default branch.
 
 ## 1. Look before writing
+- **If the project already has a workflow,** stop and suggest `/sdlc-kit:adopt` instead. Signs: rules in
+  `AGENTS.md` or `.cursorrules`; a `CLAUDE.md` that already describes how features get planned; loose plan or todo files; a `.specify/` folder
+  or project skills that plan or build; unfinished feature branches. This skill only adds; `adopt` also
+  converts and retires what's there.
 - Read the repo: `README`, the existing `CLAUDE.md` (if any), build and test config (package.json,
   pyproject, Makefile, etc.), CI config, and which folders are vendored or generated.
 - Find each project's **real** test/check command. Run the cheap ones to confirm they work and to

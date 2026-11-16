@@ -20,6 +20,7 @@ folder. A larger intent lists 2–4 stories, and each one gets its own spec, pla
 | Component | Stage | What it does |
 |---|---|---|
 | `/sdlc-kit:init` | Setup | Scaffolds a project: `CLAUDE.md` sections, `intent/` templates, `.gitignore`, protected paths, starter policy skills, and optionally a runbook and team settings. |
+| `/sdlc-kit:adopt [--survey]` | Setup | For a project that already builds with AI. Surveys what it uses today, sorts each item into keep, move, remove or add, turns informal rules into policy skills, retires the old workflow, runs the `init` steps, and records unfinished work as follow-ups that `intents` tracks. `--survey` only reports. |
 | `/sdlc-kit:new-intent <idea>` | 1 Plan | Interviews you, gathers evidence from the code (verified vs. assumed), and drafts `intent.md`. |
 | `/sdlc-kit:review-intent [folder]` | 1 Plan | Finds the gaps a draft intent leaves, resolves every open question with you, records the Decisions table, and sets the status to accepted, deferred (with a revisit month) or rejected. It never merges: that's still the human's approval. With `SDLC_REVIEW=doc` it publishes the draft as a Claude Doc for the product owner and reads their comments back. |
 | `/sdlc-kit:new-spec <folder>` | 2 Design | Writes the spec in two parts: a plain-language part the product owner approves from (what users get, how they'll know it works, the decisions they need to make, non-goals), then the engineering detail (numbered requirements, Given/When/Then acceptance criteria, design, policy review). Applies the project's policy skills, flags conflicts, and says when no spec is needed. |
@@ -242,6 +243,25 @@ merged intent into tickets:
 
 Without `SDLC_JIRA_PROJECT`, no skill mentions Jira, and `/sdlc-kit:sync-jira` stops with these setup
 steps rather than asking for a key.
+
+## Adopting in an existing project
+`/sdlc-kit:init` is for a project with no workflow yet. It only adds files. A project that already
+builds with AI has rules in an instruction file, plans in loose files and features half built on
+branches, and `init` would leave all of that next to the new workflow. Use `/sdlc-kit:adopt` there.
+It sorts everything it finds into four answers, and you confirm each one:
+
+- **Keep:** finished plans and specs stay where they are, as history. Nothing is converted.
+- **Move:** informal rules become policy skills, each with an owner.
+- **Remove:** other planning skills and tooling, so two workflows don't answer the same request.
+- **Add:** what `init` creates.
+
+The adoption is recorded as the project's first intent. Each piece of unfinished work becomes a
+`→ follow-up: <slug>` line in it, so `intents status` lists it as reserved and
+`/sdlc-kit:new-intent` picks it up later. It needs a clean working tree and a remote. It opens one PR
+and never merges it. `/sdlc-kit:adopt --survey` only reports what it found.
+
+[Migrating a Spec Kit project](docs/migrating-from-spec-kit.md) is a worked example from a real
+migration.
 
 ## Install
 There are two ways to install. Both install the plugin for your user, so every project and session
