@@ -12,7 +12,8 @@ one, even an informal one: rules in an instruction file, plans and todos in loos
 built on branches, maybe another planning tool. It converts and retires what's there, then sets the
 kit up.
 
-The whole move is **one branch and one PR**, with no change to product code.
+The whole move is **one branch, one commit and one PR**, with no change to product code. Nothing is
+written before the branch exists (end of §2), and nothing is committed before the proof (§9).
 - **Finished work is never deleted or converted.** Old plans and specs stay where they are, as history.
 - **Nothing is removed until the user confirms it,** row by row (§2).
 - **Never merge the PR.** Merging is the human's approval.
@@ -25,16 +26,24 @@ Stop and say what's needed whenever a check below fails.
 
 - **A git repo with at least one commit.**
 - **A clean working tree.** If `git status --porcelain` prints anything, stop: the user commits or
-  stashes it first. Never commit, stash or discard their changes yourself.
+  stashes it first. Never commit, stash or discard their changes yourself. The one exception is an
+  earlier run of this skill that stopped halfway: if the current branch is `chore/adopt-sdlc-kit`,
+  show `git status` and ask whether those are the adoption's own changes. If they are, continue from
+  where it stopped.
 - **A remote.** The kit counts a merged PR as approval, and works out every stage from the default
   branch. With no remote, run §1 and §2 so the user sees the survey, then stop: they add a remote
   first. With a remote but without `gh`, carry on, and in §10 push the branch and give the user the PR
   title and body to open by hand.
-- **Already adopted?** If `intent/README.md` exists and `CLAUDE.md` mentions `/sdlc-kit:`, then
-  `/sdlc-kit:init` ran here, or this skill did. Say so. Skip every step whose result already exists
-  and do only what's left, usually §3 to §5 and §7. Never create a second copy of a file that's there.
-  If the branch `chore/adopt-sdlc-kit` already exists, continue on it instead of starting over, and
-  list what it already holds.
+- **Already set up?** If `intent/README.md` exists and `CLAUDE.md` mentions `/sdlc-kit:`, then
+  `/sdlc-kit:init` ran here, or this skill did. Say so. Run §1 and §2 as usual, so the user still
+  confirms every row. In §6, skip every file that already exists; never create a second copy. Then
+  carry on through §7 to §10.
+- **Already recorded?** If a folder `intent/*-adopt-sdlc-kit/` exists, the adoption has its intent.
+  Don't write a second one: two intents with one slug is an error in `intents check`. Add new
+  candidates to its Out of scope instead (§7).
+- **The branch.** This skill works on `chore/adopt-sdlc-kit`, the same name `/sdlc-kit:init` uses. If
+  it exists and isn't merged into the default branch, continue on it and list what it already holds.
+  If it exists and is merged, it's finished work: use `chore/adopt-sdlc-kit-2`.
 
 ## 1. Survey (read-only)
 Change nothing in this step. Find the **default branch** first, as `/sdlc-kit:init` §1 does: propose
@@ -47,8 +56,9 @@ somewhere else. Then look for:
 - **Loose planning files:** `PLAN.md`, `TODO.md`, `ROADMAP.md`, `docs/plans/`, `docs/superpowers/`,
   `tasks/`, `specs/`.
 - **Other workflow tooling:** a `.specify/` folder, project skills or commands that plan, spec or
-  build (`.claude/skills/`, `.claude/commands/`), and planning plugins enabled in
-  `.claude/settings.json`.
+  build (`.claude/skills/`, `.claude/commands/`), and plugins that plan or brainstorm. Check the
+  project's `.claude/settings.json`, the user's `~/.claude/settings.json`, and the skills available
+  in this session: such a plugin is usually enabled for the user, not the project.
 - **Work in flight:**
   - `git branch -a --no-merged <default-branch>`: branches with unmerged work;
   - `gh pr list`: open PRs;
@@ -56,6 +66,7 @@ somewhere else. Then look for:
   - unticked items in the plan and todo files.
 - **How the team merges today:** `git log --merges --oneline -20` and `gh pr list --state merged`.
   Commits straight to the default branch mean the PR-per-stage habit is new for them (§8).
+- **Without `gh`,** ask the user which PRs are open and how the team merges.
 - **What `/sdlc-kit:init` §1 looks for:** each project's real check command and its result today, and
   tracked env files (`git ls-files | grep -E '(^|/)\.env'`).
 - **Tests:** whether there are any, and in which language. It decides how the test lock behaves (§8).
@@ -80,9 +91,13 @@ The usual answers:
 Ask the user to confirm or change each row. Nothing is written until they have. With `--survey`, stop
 here.
 
+Then create the branch `chore/adopt-sdlc-kit` off the default branch, or switch to the one §0 chose.
+Every change from here on happens on it.
+
 ## 3. Work in flight
 For each unfinished item from §1, ask the user to choose:
-- **Finish it the old way first.** They merge or close it, then run this skill again.
+- **Finish it the old way first.** They merge or close it. Carry on with the other items meanwhile;
+  if it's still open at §10, list it in the PR as a decision left to the team.
 - **Make it a candidate intent.** Give it a slug and one line saying what's done and what's left.
 
 **Never carry a half-built branch across.** `/sdlc-kit:build` finds progress through its own commit
@@ -90,14 +105,16 @@ names (`test(<slug>): step N:`, `feat(<slug>): step N:`) and `feat/<slug>` branc
 has neither, so the kit would treat it as not started. The branch stays where it is; the intent that
 replaces it says what to reuse from it.
 
-**A slug** is lowercase letters, digits and hyphens, and unique across `intent/`. Run `intents status`
-(on your PATH while this plugin is enabled) and don't reuse a slug it lists.
+**A slug** is lowercase letters, digits and hyphens, and unique across `intent/`. Run
+`intents status --base origin/<default-branch>` (`intents` is on your PATH while this plugin is
+enabled) and compare each candidate with the intent folder names without their dates, the story
+slugs, and the reserved slugs. A candidate that reuses an intent's slug is silently not reserved.
 
 **No tests, or a check command that fails today?** Add one more candidate, and list it first: a
 working check command and a first set of tests around the behaviour that matters most. The build is
 test-first and the verifier runs the check command, so without them the kit's gates check nothing.
-Record today's result in `CLAUDE.md` under Known gaps, as `/sdlc-kit:init` does. A command that
-fails today is recorded as failing, not hidden.
+§6 records today's result in `CLAUDE.md` under Known gaps. A command that fails today is recorded
+as failing, not hidden.
 
 ## 4. Rules into policy skills
 Policy skills are the written rules that `/sdlc-kit:new-spec` and the build apply. Write them from the
@@ -111,7 +128,8 @@ instruction files the survey found. This replaces `/sdlc-kit:init` §6.
   external writes, service and data boundaries, customer data.
 - For each group, create `.claude/skills/<name>/SKILL.md` from
   `${CLAUDE_PLUGIN_ROOT}/templates/policy-skill/SKILL.md`. The description starts with `Policy -`. It
-  names its owner, lists the questions every spec must answer, and **points to the source document
+  names its owner, lists the questions every spec must answer and the known violations in today's
+  code (with evidence), and **points to the source document
   instead of copying it** when the project keeps a rule book (a constitution, a standards document).
 - **Two files that disagree** (`CLAUDE.md` says one thing, `.cursorrules` says another): show both side
   by side, as a conflict for the owner. Never pick one yourself. Until the owner decides, neither
@@ -150,7 +168,10 @@ tracks.
 
 Write `intent/<today>-adopt-sdlc-kit/intent.md` from `intent/_TEMPLATE.md`:
 - **Problem** and **Desired outcome:** why the project is moving, in the user's own words.
-- **Decisions:** the confirmed table from §2, with who decided each row.
+- **Decisions:** the template's table (question, resolution, who, date), one row per choice the user
+  made in §2 to §5.
+- **What was kept, moved, removed and added:** a section of its own, holding the confirmed table
+  from §2.
 - **Out of scope:** one line per candidate, each ending with its marker:
   ```markdown
   ## Out of scope
@@ -158,18 +179,16 @@ Write `intent/<today>-adopt-sdlc-kit/intent.md` from `intent/_TEMPLATE.md`:
   - The CSV export started on `export-wip`: the endpoint exists, the download button doesn't. → follow-up: csv-export
   ```
 - **Status:** `accepted`. Leave **Approved by** for the person who merges the PR.
-- Delete the sections that don't apply (Stories, Depends on, Supersedes).
+- Delete every template section that doesn't apply, such as Stories, Depends on, Supersedes and
+  Revisit.
 
-Commit everything from §4 to §7 on the branch with this subject, exactly:
+If §0 found the adoption already recorded, add the new candidates to that intent's Out of scope and
+note the change in its Decisions. Keep its Status.
 
-```
-feat(adopt-sdlc-kit): step 1: adopt sdlc-kit
-```
-
-That subject is how `intents` knows the adoption shipped: once the PR merges, `intents status` shows it
-as `shipped`, with no spec or plan, and lists every candidate as a **reserved** slug.
-`/sdlc-kit:new-intent` picks a reserved slug up when someone starts that work, and
-`/sdlc-kit:review-intent backlog` lists the ones nobody has written.
+Once this merges with the commit subject from §9, `intents status` shows the adoption as `shipped`,
+with no spec or plan, and lists every candidate as a **reserved** slug. `/sdlc-kit:new-intent` picks a
+reserved slug up when someone starts that work, and `/sdlc-kit:review-intent backlog` lists the ones
+nobody has written.
 
 ## 8. Say what changes for the team
 Put these in the PR body. Where one is a rule, put it in `CLAUDE.md` too.
@@ -181,31 +200,47 @@ Put these in the PR body. Where one is a rule, put it in `CLAUDE.md` too.
 - **Ask whether docs-only PRs run the full check command,** and record the answer in `CLAUDE.md`.
   Running it only on the feature PR is a reasonable choice.
 - **The test lock is whole-file for everything but Python.** Add-only locks need `test_*.py` or
-  `*_test.py`. In any other language, adding a test to a file an earlier step locked needs a human
-  unlock. For those projects, add this rule to `CLAUDE.md`: every plan step puts its tests in new
-  files.
+  `*_test.py`, and `python3` installed. In any other language, adding a test to a file an earlier
+  step locked needs a human unlock. For those projects, add this rule to `CLAUDE.md`: every plan
+  step puts its tests in new files.
 - **The env guard matches by file name.** Any file whose name starts with `.env`, except
-  `.env.example`, is blocked for reading and writing. That includes encrypted files tracked on
-  purpose, such as `.env.staging.enc`. Edit those through the project's own command.
+  `.env.example`, is blocked for Claude's file tools (Read, Edit, Write). That includes `.envrc`, and
+  encrypted files tracked on purpose, such as `.env.staging.enc`. Edit those through the project's
+  own command.
 - **Commit and branch names carry meaning.** `test(<slug>): step N: …`, `feat(<slug>): step N: …` and
   `feat/<slug>` are how `/sdlc-kit:build` finds progress.
-- **Enabling the plugin in `.claude/settings.json` may not install it** in a new clone or worktree. If
-  the `/sdlc-kit:*` skills are missing there, run `claude plugin install sdlc-kit@sdlc-kit`.
+- **Enabling the plugin in `.claude/settings.json` may not install it** in a new clone or worktree.
+  One migration saw "enabled in project settings but isn't installed" there. If the `/sdlc-kit:*`
+  skills are missing, run `claude plugin install sdlc-kit@sdlc-kit --scope project` in that folder,
+  or install the plugin for the user.
 - **Start with one small pilot intent,** and review the friction after it ships.
 
-## 9. Prove it
+## 9. Prove it, then commit
 Run these and keep the output for the PR:
-- `intents status` and `intents check`: no errors, and the candidates listed as reserved.
+- `intents status --base origin/<default-branch>` and `intents check --base origin/<default-branch>`:
+  no errors, and the candidates listed as reserved. Pass `--base`: a new `INTENTS_BASE` in
+  `.claude/settings.json` isn't read until the next session.
 - Each project's check command. Compare with the result §1 recorded: adopting must not change it.
 - A search for leftover references to anything §5 removed (`git grep -n -i '<name>'`), outside the
   files kept as history.
 
-Fix what these find before opening the PR. If a check failed before the adoption and still fails,
-say so; don't fix product code here.
+Fix what these find. If a check failed before the adoption and still fails, say so; don't fix
+product code here.
+
+Then commit everything since §2 as **one commit**, with this subject, exactly:
+
+```
+feat(adopt-sdlc-kit): step 1: adopt sdlc-kit
+```
+
+That subject is how `intents` knows the adoption shipped. If something needs changing after this,
+amend the commit; don't add a second one.
 
 ## 10. Open the PR
-Work on the branch `chore/adopt-sdlc-kit`, off the default branch. Push it and open one PR against the
-default branch, titled `chore: adopt sdlc-kit`, with these sections:
+Push the branch and open one PR against the default branch. **Give the PR the commit's subject as its
+title:** `feat(adopt-sdlc-kit): step 1: adopt sdlc-kit`. A squash merge names its commit after the PR
+title, and with any other title the adoption would never show as shipped. Without `gh`, give the user
+this title and the body to open the PR by hand. The body has these sections:
 
 - **What was found:** the survey, in a few lines.
 - **Keep / move / remove / add:** the confirmed table.
@@ -216,4 +251,5 @@ default branch, titled `chore: adopt sdlc-kit`, with these sections:
 - **Decisions left to the team:** unresolved rule conflicts, and anything the user deferred.
 
 Tell the user the adoption is one commit, so reverting the merge undoes it. **Never merge the PR.**
-After they merge it, suggest starting with the smallest reserved slug as the pilot.
+After they merge it, ask them to run `intents status`: the adoption should read `shipped`. Then
+suggest starting with the smallest reserved slug as the pilot.
