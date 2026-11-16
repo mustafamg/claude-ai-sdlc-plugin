@@ -9,7 +9,8 @@ on a Spec Kit project it leaves two workflows side by side. This guide covers th
 not: what to keep, what to move, what to remove, and in what order.
 
 `/sdlc-kit:adopt` now does this for any existing workflow. This guide is the worked example it was
-written from.
+written from. `adopt` differs in one place: this migration finished every feature in flight first and
+drafted no intents, while `adopt` can also record unfinished work as reserved follow-ups.
 
 ## The idea in one paragraph
 
@@ -141,14 +142,18 @@ Tell the team these before the first intent.
 - **More PRs per feature.** Intent, spec and plan are each approved by a merge. Decide once whether
   docs-only PRs run the full check command. Running it only on the feature PR worked.
 - **The env guard matches by file name.** Any file whose name starts with `.env`, except
-  `.env.example`, is blocked for reading and writing. That includes encrypted files that are
+  `.env.example`, is blocked for Claude's file tools (Read, Edit, Write). That includes encrypted files that are
   tracked on purpose, such as `.env.staging.enc`. Edit those through the project's own command.
 - **`init`'s `.gitignore` line `.env*` can match tracked files.** `init` stops when it does. If the
   existing rules already cover env files, skip that line.
 - **Commit and branch names carry meaning.** `test(<slug>): step N: …`, `feat(<slug>): step N: …` and
   `feat/<slug>` are how `/sdlc-kit:build` finds progress.
 - **Feature numbers stop.** Slugs identify work. Old numbers can stay as labels in the roadmap.
-- **Enabling the plugin in `.claude/settings.json` does not install it.** A project-scope install is recorded per folder path, so a new clone or a new git worktree starts with the message "enabled in project settings but isn't installed" and no `/sdlc-kit:*` skills. Run `claude plugin install sdlc-kit@sdlc-kit --scope project` once in each worktree, or install at user scope.
+- **Enabling the plugin in `.claude/settings.json` does not install it.** A project-scope install is
+  recorded per folder path, so a new clone or a new git worktree starts with the message "enabled in
+  project settings but isn't installed" and no `/sdlc-kit:*` skills. Run
+  `claude plugin install sdlc-kit@sdlc-kit --scope project` once in each worktree, or install at user
+  scope.
 - **Other planning plugins overlap.** If a brainstorming or plan-writing plugin is also installed,
   call the `/sdlc-kit:*` commands by name.
 

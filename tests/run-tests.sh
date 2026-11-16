@@ -531,7 +531,7 @@ git init -q -b main && git config user.email t@t && git config user.name t
 echo x > app.txt && git add -A && git commit -qm init
 mkintent 2026-11-16-adopt-sdlc-kit accepted "" \
   "- Finish the export. → follow-up: csv-export\n- A working check command. → follow-up: test-baseline"
-git add -A && git commit -qm "feat(adopt-sdlc-kit): step 1: adopt sdlc-kit"
+git add -A && git commit -qm "feat(adopt-sdlc-kit): step 1: adopt sdlc-kit (#7)"  # as a squash merge titles it
 outp 0 "an adoption record with no spec shows as shipped" 'adopt-sdlc-kit +shipped' "$I" status --base main
 outp 0 "its candidates are reserved slugs" 'csv-export +promised at' "$I" status --base main
 outp 0 "the second candidate is reserved too" 'test-baseline +promised at' "$I" status --base main
