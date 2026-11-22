@@ -621,6 +621,42 @@ outp 0 "a lowercase story field warns, since After: is read only as written" 'wa
 mkdir -p intent/2026-01-15-nu
 sed 's/draft | accepted | deferred | rejected | superseded/draft/' "$KIT/templates/intent-TEMPLATE.md" > intent/2026-01-15-nu/intent.md
 outp 0 "the template's English keywords give no new output" 'no problems found' "$I" check intent/2026-01-15-nu/intent.md
+mkdir -p intent/2026-01-15-omicron
+cat > intent/2026-01-15-omicron/intent.md <<'EOF'
+# Intent: omicron
+
+- **Author:** t
+- **Status:** accepted
+- **Owner:** t
+- **Relates to:** chat-login
+
+## Problem
+x
+
+## Stories
+### S1 o-one: One
+- **Outcomes:** 1
+- **Notes:** x
+
+## Decisions so far (from the author, 2026-01-15)
+x
+
+## Amendment 2026-01-20: no regenerate
+x
+EOF
+outn 0 "English headings and fields of a project's own don't warn" "isn't one" "$I" check intent/2026-01-15-omicron/intent.md
+mkdir -p intent/2026-01-15-pi
+cat > intent/2026-01-15-pi/intent.md <<'EOF'
+# Intent: pi
+
+- **Author:** t
+- **Status:** accepted
+
+##   المشكلة
+x
+EOF
+outp 0 "a translated heading with extra spaces after ## still warns" 'warning: intent/2026-01-15-pi/intent.md:6: .*## Problem' "$I" check intent/2026-01-15-pi/intent.md
+rm -rf intent/2026-01-15-omicron intent/2026-01-15-pi
 git add intent/2026-01-15-iota intent/2026-01-15-kappa && git commit -qm "docs(intent): translated keywords"
 outp 0 "a translated Stories heading is still read as one story" '2026-01-15-iota +accepted' "$I" status --base HEAD
 outn 0 "a story under a translated Stories heading is still not read" 'i-one' "$I" status --base HEAD

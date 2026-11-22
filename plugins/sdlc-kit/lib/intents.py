@@ -35,9 +35,10 @@ What it reads:
     -> follow-up: <slug>   (or the arrow →). The slug stays reserved until an intent or story uses it.
   A ref is a slug (an intent folder's name without its date, or a story's slug), a story id (S2) of
   the same intent, or #N (a pull request or issue, checked with gh).
-  Keywords stay in English. A `## ` heading that isn't one of the template's, a header or story field
-  intents doesn't know, and Eastern Arabic-Indic digits or `،` in a structural line get a warning,
-  since a translated keyword would otherwise be skipped without a word.
+  Keywords stay in English. A `## ` heading or a header or story field written in another language,
+  a story field in the wrong case, and Eastern Arabic-Indic digits or `،` in a structural line get a
+  warning, since a translated keyword would otherwise be skipped without a word. English headings and
+  fields a project adds of its own are left alone.
 
 Stages are derived, never declared: reserved; draft (the intent is only on a branch or in the working
 tree); the intent's Status; specced and planned (spec.md / plan.md on the default branch); building
@@ -68,8 +69,9 @@ MAX_STORIES = 5
 
 HEADER_FIELD = re.compile(r"^\s*[-*]\s+\*\*(?P<key>[^*:]+):\*\*\s*(?P<val>.*)$")
 STORIES_HEADING = re.compile(r"^##\s+stories\s*$", re.I)
-# The template's headings and the fields intents knows. Anything else is skipped, so a translated
-# keyword gets a warning naming the English ones.
+# The template's headings and the fields intents knows. Anything else is skipped, so a keyword
+# written in another language gets a warning naming the English ones. English headings and fields a
+# project adds of its own don't.
 HEADINGS = ("Problem", "Desired outcome", "Where we are today", "Stories", "Users affected",
             "Systems affected", "Constraints", "Out of scope", "Open questions", "Decisions", "Evidence")
 HEADER_FIELDS = ("Author", "Date", "Status", "Approved by", "Revisit", "Depends on", "Supersedes",
@@ -212,9 +214,17 @@ def arabic_digits(where, n, line):
                            f"write `{line.strip().translate(TO_ASCII)}`")]
 
 
+def translated(name):
+    """True if a keyword has letters outside ASCII, so it was written in another language."""
+    return any(ord(c) > 127 and c.isalpha() for c in name)
+
+
 def unknown_field(where, n, kind, name, known):
-    # Header fields are read in any case; `After:` only as written, so story fields must match exactly.
-    if (name.lower() in (k.lower() for k in known)) if kind == "header" else name in known:
+    # Only a field in another language is a translated keyword: English fields a project adds for its
+    # own notes (Owner, Relates to) stay quiet. `After:` is read only as written, so a story field that
+    # differs from a known one only in case warns too.
+    miscased = kind == "story" and name not in known and name.lower() in (k.lower() for k in known)
+    if not translated(name) and not miscased:
         return []
     return [warn(where, n, f"the {kind} field {name!r} isn't one intents reads, so it's skipped. Keep "
                            f"field names in English: {', '.join(known)}")]
@@ -232,7 +242,7 @@ def parse_intent(folder, where, text):
             section, current = ("stories" if STORIES_HEADING.match(line) else "body"), None
             if section == "stories":
                 it.stories_line, headed = n, False
-            elif line[3:].strip().lower() not in (h.lower() for h in HEADINGS):
+            elif translated(line[2:]):  # an English heading of the project's own is just text
                 probs.append(warn(where, n, f"`{line.strip()}` isn't one of the template's headings, so "
                                             "it's read as text. Keep headings in English: "
                                             f"{', '.join('## ' + h for h in HEADINGS)}"))
