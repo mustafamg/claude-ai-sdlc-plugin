@@ -78,7 +78,7 @@ this depends on in **Depends on** above, by slug or PR number, so it can be chec
 
 ## Out of scope
 What we are deliberately *not* doing. When someone will do it later, end the item with
-`→ follow-up: <slug>`, so the slug is reserved and `intents status` lists it until it's written.
+`→ follow-up: <slug>`, so the slug is reserved and `intents status` lists it under this intent until it's written.
 
 ## Open questions
 Each with a proposed answer, so the approver can say "yes" or "no, because…". Business questions

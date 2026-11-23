@@ -141,8 +141,8 @@ When an intent leaves work for later, give that work a slug instead of only desc
 ```
 
 That **reserves** `guest-chat-retention`:
-- `intents status` lists it under *Reserved*, with the file and line that promised it, until an
-  intent or story with that slug exists.
+- `intents status` lists it as `reserved`, under the intent that promised it, until an intent or
+  story with that slug exists. `intents status <that intent>` shows the file and line of the promise.
 - When someone starts that work, `/sdlc-kit:new-intent` sees the reservation and gives the new intent
   that slug, so the promise is kept by name.
 - Depending on work nobody has written yet reserves its slug the same way.
@@ -154,6 +154,11 @@ Four commands, on PATH while the plugin is enabled. None of them changes anythin
 - **`intents status [<slug>]`** derives every stage from git and is never declared: draft (including
   drafts that exist only on `docs/intent-*` branches), the intent's Status, then specced, planned,
   building and shipped. It also lists reserved slugs and who waits on them.
+  Follow-ups, written or only reserved, sit under the intent whose marker promised them; one promised
+  by several intents sits under the earliest, with the others named. Finished intents (shipped,
+  superseded, rejected) are hidden and counted on the last line, unless a follow-up under them is
+  still open, in which case they stay as its header. `--all` shows everything. Given a slug, it
+  shows that intent, its follow-ups and its reserved slugs in full, and hides nothing.
 - **`intents check [<file>...]`** reports broken relations and layout: a Supersedes whose old intent
   isn't marked superseded, a dependency cycle, a slug used twice, a spec outside its story's folder.
 - **`intents deps <slug or work folder>`** exits 1 unless a story's dependencies are met. Pull
