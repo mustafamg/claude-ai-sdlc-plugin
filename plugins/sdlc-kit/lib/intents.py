@@ -75,7 +75,7 @@ STORIES_HEADING = re.compile(r"^##\s+stories\s*$", re.I)
 HEADINGS = ("Problem", "Desired outcome", "Where we are today", "Stories", "Users affected",
             "Systems affected", "Constraints", "Out of scope", "Open questions", "Decisions", "Evidence")
 HEADER_FIELDS = ("Author", "Date", "Status", "Approved by", "Revisit", "Depends on", "Supersedes",
-                 "Review doc", "Language")
+                 "Review doc")
 STORY_FIELDS = ("Outcomes", "After", "Actors", "User story")
 STORY_REFS = re.compile(r"\b(?:After|Outcomes):")
 # Eastern Arabic-Indic digits and the Arabic comma, which intents doesn't read as 0-9 and `,`.

@@ -525,7 +525,6 @@ cat > intent/2026-01-15-kappa/intent.md <<'EOF'
 - **Author:** t
 - **Status:** accepted
 - **يعتمد على:** chat-login
-- **Language:** ar
 - **Review doc:** https://example.com/d
 
 ## Problem
@@ -570,7 +569,6 @@ cat > intent/2026-01-15-mu/intent.md <<'EOF'
 - **Date:** 2026-01-15
 - **Status:** accepted
 - **Approved by:** t
-- **Language:** ar
 - **Review doc:** https://example.com/d
 
 ## Problem
@@ -595,11 +593,11 @@ EOF
 K=intent/2026-01-15-kappa/intent.md
 outp 0 "a translated Stories heading warns" 'warning: intent/2026-01-15-iota/intent.md:9: .*## Stories' "$I" check intent/2026-01-15-iota/intent.md
 outn 0 "template headings in any case don't warn" 'heading' "$I" check intent/2026-01-15-mu/intent.md
-outp 0 "an unknown header field warns with the known list" "warning: $K:5: .*Author, Date, Status, Approved by, Revisit, Depends on, Supersedes, Review doc, Language" "$I" check $K
-outn 0 "Language and Review doc are known header fields" 'header field' "$I" check intent/2026-01-15-mu/intent.md
-outp 0 "an unknown story field warns with the story fields" "warning: $K:20: .*Outcomes, After, Actors, User story" "$I" check $K
-outp 0 "Arabic-Indic digits in a story heading warn" "warning: $K:22: .*### S1 k-three" "$I" check $K
-outp 0 "an Arabic comma in Outcomes warns" "warning: $K:17: .*1, 2" "$I" check $K
+outp 0 "an unknown header field warns with the known list" "warning: $K:5: .*Author, Date, Status, Approved by, Revisit, Depends on, Supersedes, Review doc" "$I" check $K
+outn 0 "Review doc is a known header field" 'header field' "$I" check intent/2026-01-15-mu/intent.md
+outp 0 "an unknown story field warns with the story fields" "warning: $K:19: .*Outcomes, After, Actors, User story" "$I" check $K
+outp 0 "Arabic-Indic digits in a story heading warn" "warning: $K:21: .*### S1 k-three" "$I" check $K
+outp 0 "an Arabic comma in Outcomes warns" "warning: $K:16: .*1, 2" "$I" check $K
 outp 1 "an Arabic comma in After warns next to the error" 'warning: intent/2026-01-15-lambda/intent.md:14: .*S1, S2' "$I" check intent/2026-01-15-lambda/intent.md
 outp 1 "an Arabic comma in After is still an error" "error: intent/2026-01-15-lambda/intent.md:13: can't read 'S1" "$I" check intent/2026-01-15-lambda/intent.md
 outp 0 "the hook passes keyword warnings as context" 'additionalContext.*header field' ih "$(iwrite $K)"
