@@ -271,6 +271,9 @@ The adoption is recorded as the project's first intent. Each piece of unfinished
 `/sdlc-kit:new-intent` picks it up later. It needs a clean working tree and a remote. It opens one PR
 and never merges it. `/sdlc-kit:adopt --survey` only reports what it found.
 
+The adoption is the one intent that ships without a spec, a plan, tests or the verifier: it changes no
+product code, and merging its one PR is the approval. Don't copy that shortcut for real features.
+
 [Migrating a Spec Kit project](docs/migrating-from-spec-kit.md) is a worked example from a real
 migration.
 

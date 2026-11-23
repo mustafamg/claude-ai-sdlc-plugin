@@ -149,9 +149,9 @@ Tell the team these before the first intent.
 - **Commit and branch names carry meaning.** `test(<slug>): step N: …`, `feat(<slug>): step N: …` and
   `feat/<slug>` are how `/sdlc-kit:build` finds progress.
 - **Feature numbers stop.** Slugs identify work. Old numbers can stay as labels in the roadmap.
-- **Enabling the plugin in `.claude/settings.json` does not install it.** A project-scope install is
-  recorded per folder path, so a new clone or a new git worktree starts with the message "enabled in
-  project settings but isn't installed" and no `/sdlc-kit:*` skills. Run
+- **Enabling the plugin in `.claude/settings.json` may not install it.** In this migration, a new git
+  worktree started with the message "enabled in project settings but isn't installed" and no
+  `/sdlc-kit:*` skills, apparently because a project-scope install is recorded per folder path. Run
   `claude plugin install sdlc-kit@sdlc-kit --scope project` once in each worktree, or install at user
   scope.
 - **Other planning plugins overlap.** If a brainstorming or plan-writing plugin is also installed,

@@ -12,8 +12,8 @@ one, even an informal one: rules in an instruction file, plans and todos in loos
 built on branches, maybe another planning tool. It converts and retires what's there, then sets the
 kit up.
 
-The whole move is **one branch, one commit and one PR**, with no change to product code. Nothing is
-written before the branch exists (end of §2), and nothing is committed before the proof (§9).
+The whole move is **one branch and one PR**, with no change to product code. Nothing is written
+before the branch exists (end of §2), and nothing is committed before the proof (§9).
 - **Finished work is never deleted or converted.** Old plans and specs stay where they are, as history.
 - **Nothing is removed until the user confirms it,** row by row (§2).
 - **Never merge the PR.** Merging is the human's approval.
@@ -27,8 +27,8 @@ Stop and say what's needed whenever a check below fails.
 - **A git repo with at least one commit.**
 - **A clean working tree.** If `git status --porcelain` prints anything, stop: the user commits or
   stashes it first. Never commit, stash or discard their changes yourself. The one exception is an
-  earlier run of this skill that stopped halfway: if the current branch is `chore/adopt-sdlc-kit`,
-  show `git status` and ask whether those are the adoption's own changes. If they are, continue from
+  earlier run of this skill that stopped halfway: if the current branch is `chore/adopt-sdlc-kit`
+  or a numbered one such as `chore/adopt-sdlc-kit-2`, show `git status` and ask whether those are the adoption's own changes. If they are, continue from
   where it stopped.
 - **A remote.** The kit counts a merged PR as approval, and works out every stage from the default
   branch. With no remote, run §1 and §2 so the user sees the survey, then stop: they add a remote
@@ -41,9 +41,15 @@ Stop and say what's needed whenever a check below fails.
 - **Already recorded?** If a folder `intent/*-adopt-sdlc-kit/` exists, the adoption has its intent.
   Don't write a second one: two intents with one slug is an error in `intents check`. Add new
   candidates to its Out of scope instead (§7).
-- **The branch.** This skill works on `chore/adopt-sdlc-kit`, the same name `/sdlc-kit:init` uses. If
-  it exists and isn't merged into the default branch, continue on it and list what it already holds.
-  If it exists and is merged, it's finished work: use `chore/adopt-sdlc-kit-2`.
+- **The branch.** This skill works on `chore/adopt-sdlc-kit`, the same name `/sdlc-kit:init` uses,
+  or a numbered one (`chore/adopt-sdlc-kit-2`, `-3`, …). Git can't tell whether a squash-merged
+  branch was merged, so check each existing one with
+  `gh pr list --head <branch> --state merged`:
+  - **A branch with a merged PR** is finished work. So is the unnumbered one when
+    `intent/README.md` is already on the default branch.
+  - **An unfinished one** (no merged PR, and commits or changes the default branch doesn't have):
+    continue on it and list what it already holds.
+  - **None unfinished:** start fresh on the first name that isn't taken.
 
 ## 1. Survey (read-only)
 Change nothing in this step. Find the **default branch** first, as `/sdlc-kit:init` §1 does: propose
@@ -168,17 +174,19 @@ tracks.
 
 Write `intent/<today>-adopt-sdlc-kit/intent.md` from `intent/_TEMPLATE.md`:
 - **Problem** and **Desired outcome:** why the project is moving, in the user's own words.
+- **Where we are today:** the confirmed keep / move / remove / add table from §2. Don't add a heading
+  of your own for it; `intents` reads only the template's headings.
 - **Decisions:** the template's table (question, resolution, who, date), one row per choice the user
   made in §2 to §5.
-- **What was kept, moved, removed and added:** a section of its own, holding the confirmed table
-  from §2.
 - **Out of scope:** one line per candidate, each ending with its marker:
   ```markdown
   ## Out of scope
   - A working check command and first tests around checkout. → follow-up: test-baseline
   - The CSV export started on `export-wip`: the endpoint exists, the download button doesn't. → follow-up: csv-export
   ```
-- **Status:** `accepted`. Leave **Approved by** for the person who merges the PR.
+- **Status:** `accepted`. **Approved by:** ask the user who will review and merge the PR, and write
+  that name with today's date, as other intents do: `pat (2026-01-12)`. Nobody can change it after
+  the merge without another PR, so check the name with the user.
 - Delete every template section that doesn't apply, such as Stories, Depends on, Supersedes and
   Revisit.
 
@@ -233,8 +241,9 @@ Then commit everything since §2 as **one commit**, with this subject, exactly:
 feat(adopt-sdlc-kit): step 1: adopt sdlc-kit
 ```
 
-That subject is how `intents` knows the adoption shipped. If something needs changing after this,
-amend the commit; don't add a second one.
+That subject is how `intents` knows the adoption shipped. Review fixes after this can be ordinary
+follow-up commits on the branch: a squash merge takes its subject from the PR title (§10), and a merge
+or rebase keeps this commit.
 
 ## 10. Open the PR
 Push the branch and open one PR against the default branch. **Give the PR the commit's subject as its
@@ -250,6 +259,6 @@ this title and the body to open the PR by hand. The body has these sections:
 - **Proof:** the output from §9.
 - **Decisions left to the team:** unresolved rule conflicts, and anything the user deferred.
 
-Tell the user the adoption is one commit, so reverting the merge undoes it. **Never merge the PR.**
+Tell the user reverting the PR undoes the whole adoption. **Never merge the PR.**
 After they merge it, ask them to run `intents status`: the adoption should read `shipped`. Then
 suggest starting with the smallest reserved slug as the pilot.
