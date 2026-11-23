@@ -13,6 +13,26 @@ If that's empty, ask the user for the idea in a sentence or two, and who asked f
 This is **Stage 1 only**. Do not write `spec.md` or `plan.md`, do not change any code, and don't
 design the implementation beyond what's needed to state constraints.
 
+## Language
+**Talk in the user's language; write the file in English.** Reply in the language the user writes
+in, with no setting to check: Arabic in, Arabic out; English in, English out. `intent.md` is always
+English, because teammates who don't share the user's language read it, and `intents` reads its
+keywords.
+- **If the conversation isn't English,** say once, at the start, that the file is written in English
+  and that you'll read it back before saving it.
+- **Keep technical words in English** inside the user's sentences ("الـ token بينتهي بعد 30 يوم"),
+  using the words the file will use. Keep the user's language simple; don't force translations of
+  technical terms.
+- **Everything in the file is English:** headings, header fields, `Status`, `After:`, `Outcomes:`,
+  `→ follow-up:`, slugs and story ids, the digits 0–9, and `,` between refs. A business word with no
+  exact English equivalent keeps the original in parentheses the first time, e.g. "no-show (غياب)".
+- **Text the product's users see** is quoted in the language they see it in, whoever writes the
+  intent: `the SMS says "تم إلغاء موعدك"`.
+- PRs and commits are English. Add a summary in the user's language only if someone asks, in a
+  collapsed `<details>` block.
+
+In an English conversation, skip the read-back and back-translation in §5 and §6.
+
 ## 1. Load context
 Read `CLAUDE.md`, `intent/README.md` and `intent/_TEMPLATE.md`. If `intent/` doesn't exist, suggest
 running `/sdlc-kit:init` first. Don't read other intents as examples: their constraints, decisions
@@ -65,7 +85,19 @@ cheap, read-only checks (existing tests, scripts, grep) to gather evidence. For 
 whether it's **verified** (you saw or ran it) or **assumed**. Never read real `.env*` files.
 
 ## 5. Draft
+**If the conversation isn't English, read back first.** Before writing anything, summarize in the
+user's language what the file will say: the problem, the numbered outcomes, what's out of scope,
+the stories if any, and the open questions with your proposed answers. End it with a **term list**
+pairing each business word with the English the file will use (موعد = appointment, غياب = no-show).
+Reuse the words in `CLAUDE.md`'s **Glossary** if it has one, and suggest adding the new ones there
+when the intent's PR is opened, so later stages and teammates use the same English. Ask the user to
+correct the read-back, and write the file only once they confirm. This holds even when they
+say "just write it": the read-back is how they check what the English will say. Once they confirm,
+write it straight away; don't ask them to confirm again.
+
 Write `intent/<YYYY-MM-DD>-<slug>/intent.md` from the template, using today's date.
+- Take the **Author** from `git config user.name`. If that doesn't work, leave the `<name>`
+  placeholder and ask for the name after the file is written; don't hold the file back for it.
 - Tick only the systems you have evidence the change touches.
 - Write the Problem and *Where we are today* for the product owner: business terms, no file paths or
   class names. Put the technical findings in **Evidence** at the end, grouped under `###` headings
@@ -87,7 +119,10 @@ Write `intent/<YYYY-MM-DD>-<slug>/intent.md` from the template, using today's da
 - A hook runs `intents check` on the file after you write it. Fix any error it reports.
 
 ## 6. Review, then open a PR
-Show the draft and fix it with the user until they're happy. Then:
+Show the draft and fix it with the user until they're happy. If the conversation isn't English,
+**translate the file you wrote** back into the user's language, not your earlier read-back, so any
+drift between what they meant and what the English says shows up ("guests can see" vs "guests can
+edit"). This translation lives in the chat; it isn't a document. Then:
 1. Branch off the default branch as `docs/intent-<slug>`, and commit only the intent file. If it
    supersedes a merged intent, also amend that one's Status to `superseded` in the same commit (see
    the template's amendment convention).

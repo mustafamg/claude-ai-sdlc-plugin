@@ -20,6 +20,9 @@ intent with stories, the story's folder inside it (`intent/<date>-<slug>/<story-
 work" section) and the plan's Verification section. If the project has CI, the PR's checks must also
 pass. If it has no CI, the local checks in this loop are the gate. Never skip them.
 
+**Language:** talk in the user's language. Code, tests, commits and the PR are English. Text the
+product's users see is whatever the spec quotes, in the language the spec quotes it in.
+
 ## 0. Gate and step selection
 Stop and say why whenever a check below fails.
 

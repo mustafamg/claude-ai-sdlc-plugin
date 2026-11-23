@@ -16,6 +16,27 @@ it's an intent folder whose intent has stories, list them and ask which story.
 This is **Stage 2 only**. Do not write `plan.md` and do not change code. Describe *what* the system
 must do and how it behaves, not which files change.
 
+## Language
+**Talk in the user's language; write the spec in English.** Reply in the language the user writes
+in, with no setting to check. `spec.md` is English, headings and prose alike, so any engineer can
+build from it.
+- **Interview** in the user's language, with technical words kept in English inside their sentences.
+  Reuse the intent's terms and `CLAUDE.md`'s **Glossary**, and confirm any new business term with the
+  user before using it.
+- **Text the product's users see** is quoted in the language they see it in, exactly as given,
+  whoever writes the spec: `Then the patient gets "تم إلغاء موعدك"`. Don't translate it.
+- **Each decision** is recorded in English ("Decided by …, date") and read back to the user in their
+  language before it moves to *Decided while designing*.
+- **Once it's written, translate Part 1** (`For the product owner`) of the file you wrote back into
+  the user's language, in the chat, so they can check it says what they meant. Translate Part 2 only
+  where they ask ("explain A7").
+- **Review comments** from a reviewer in another language: explain each one in the writer's
+  language, agree the fix, and change the English file.
+- PRs and their technical questions are English, for an engineer. Add a summary in the user's
+  language only if someone asks, in a collapsed `<details>` block.
+
+In an English conversation, none of the translation steps apply.
+
 ## 1. Gate
 - The intent must be **merged to the default branch** with `Status: accepted`. If it isn't, stop and
   say so: a `draft` needs `/sdlc-kit:review-intent`, a `deferred` intent names the month it's revisited

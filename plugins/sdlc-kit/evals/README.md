@@ -10,7 +10,7 @@ Eval cases for the kit's skills, run with `claude plugin eval`. They check two t
 ## Running
 
 ```bash
-claude plugin eval plugins/sdlc-kit --scaffold --allow-tools Bash --no-publish \
+claude plugin eval plugins/sdlc-kit --scaffold --allow-tools Bash Write Edit --no-publish \
   --model claude-sonnet-5 --judge-model claude-sonnet-5 --max-cost-usd 15
 ```
 
@@ -19,7 +19,8 @@ claude plugin eval plugins/sdlc-kit --scaffold --allow-tools Bash --no-publish \
   intents merged on `main` or drafted on a `docs/intent-*` branch, because the skills now check that
   state with `intents`. Without the flag the workspace is empty, and the cases quietly test nothing.
 - **`--allow-tools Bash` is required for the stories cases.** They list Bash in `allowed_tools` so
-  the skills can try `intents status`, `check` and `deps`, and Bash needs an operator grant.
+  the skills can try `intents status`, `check` and `deps`, and Bash needs an operator grant. The
+  language cases also need **`Write Edit`**, because they check the file the skill writes.
 - **These cases test the skills without `intents`.** The eval sandbox doesn't put the plugin's
   `bin/` on PATH, so `intents` reports "not found" or "operation not permitted". On macOS, `git`
   fails there too, because its `xcrun` wrapper can't write its cache. The skills then fall back to
@@ -33,7 +34,8 @@ claude plugin eval plugins/sdlc-kit --scaffold --allow-tools Bash --no-publish \
   few seconds with `auth_failed`.
 - **Add `--keep-temp` to investigate a failure.** It keeps each run's workspace and `trace.jsonl`; the
   report itself has only the judge's votes, not the transcript.
-- `--tag trigger` runs just the routing cases; `--tag behavior` runs the rest.
+- `--tag trigger` runs just the routing cases; `--tag behavior` runs the rest; `--tag language`
+  runs the cases for Arabic and English conversations.
 - **Grade with Sonnet.** The default judge is Haiku, and it produced a unanimous false FAIL on a
   `defer-outcome` response that plainly deferred the intent and asked for the revisit month. The
   judged criteria here need a judge that reads a whole answer carefully.
@@ -55,8 +57,23 @@ claude plugin eval plugins/sdlc-kit --scaffold --allow-tools Bash --no-publish \
 | `plan-waits-for-dependency` | behavior | A story marked `After: S1 ships` isn't planned while S1 has only a plan. The gate says S1 has to ship first. |
 | `sync-jira-off` | behavior | Asked for Jira tickets in a project without `SDLC_JIRA_PROJECT`, the sync stops, says how to turn Jira on, and creates nothing. (`review-intent-trigger` also checks that a review in such a project stays in the PR.) |
 | `spec-asks-for-a-story` | behavior | Asked to spec an intent that has stories, the spec is written for one story, not for the whole intent. |
+| `arabic-idea-routes-to-new-intent` | trigger | An idea told in Arabic, without the slash command ("عندي فكرة…"), routes to `new-intent`, and the reply is Arabic. |
+| `arabic-intent-reads-back` | behavior | An idea given in Arabic gets an Arabic read-back with a term list (موعد = appointment) before any `intent.md` is written. |
+| `arabic-intent-written-in-english` | behavior | Once the read-back is confirmed, `intent.md` is written in English (keywords, prose, 0–9 digits), and the written file is translated back into Arabic in the chat. |
+| `arabic-spec-keeps-user-text` | behavior | A spec drafted in Arabic is English, keeps the patients' Arabic SMS text as given, and translates Part 1 back. |
+| `english-intent-no-translation` | behavior | An English conversation gets no language note, read-back translation or back-translation. |
 
 ## Reading the scores
+
+**A prompt that starts with a slash command never calls the `Skill` tool.** The command expands the
+skill straight into the prompt, so a `tool_used: Skill` grader reports 0 calls even when the skill
+ran. The language cases start with `/sdlc-kit:new-intent` or `/sdlc-kit:new-spec` and don't use one;
+read the trace to see the skill's steps instead.
+
+**Judge a written file with `focus: {source: file, path: …}`, not `focus: trace`.** The judge's view
+of a long trace can leave out the `Write` call, so it fails a file it never saw. The file path can't
+be a glob, so a case that judges a file names its folder in the prompt (as
+`arabic-intent-written-in-english` does).
 
 The **Δ against the no-plugin baseline is not the goal here.** The base model already reviews a
 document well, so a criterion like "asks good questions" scores about the same with and without the

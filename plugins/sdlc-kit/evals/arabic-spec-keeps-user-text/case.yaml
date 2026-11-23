@@ -1,0 +1,84 @@
+schema_version: "1.1"
+name: arabic-spec-keeps-user-text
+description: A spec drafted in an Arabic conversation is English, keeps the patients' Arabic text as is, and Part 1 is translated back.
+tags: [behavior, language]
+runs: 2
+
+# Single-turn, so the prompt gives every answer the interview would ask for and says to write.
+execution:
+  prompt: |
+    /sdlc-kit:new-spec intent/2026-02-10-appointment-reminders
+
+    الـ intent متوافق عليه. دي الإجابات على كل اللي محتاجه، فاكتب الـ spec على طول:
+    - نص رسالة التذكير اللي المريض بيشوفها بالظبط: «تذكير: عندك موعد بكرة الساعة {time}. رد بـ 1
+      للتأكيد أو 2 للإلغاء.»
+    - لو رد بـ 1، يوصله: «تم تأكيد موعدك.» ولو رد بـ 2، يوصله: «تم إلغاء موعدك.» والموعد يرجع
+      متاح للحجز فورًا.
+    - لو رد بأي حاجة تانية، يوصله: «رد بـ 1 أو 2 بس.» ومحدش يتحسب له حاجة.
+    - لو مردش خالص، الموعد يفضل زي ما هو، وموظف الاستقبال يشوفه "لم يؤكد".
+    - موظف الاستقبال يشوف حالة كل موعد في الكالندر: مؤكد، ملغي، لم يؤكد.
+    - الرد بعد ميعاد الموعد ما يغيّرش حاجة.
+    - المصطلحات: موعد = appointment، غياب = no-show، موظف الاستقبال = receptionist.
+    مفيش قرارات تانية محتاجة مني. لو لقيت حاجة تانية مش متغطية، حط اقتراحك تحت Needs a decision
+    واكتب الـ spec، وأنا هراجعها بعدين.
+  max_turns: 30
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+
+context:
+  scaffold_script: setup.sh
+
+graders:
+  - name: spec-written
+    type: file_exists
+    path: "intent/2026-02-10-appointment-reminders/spec.md"
+    weight: 1.0
+
+  - name: keeps-patient-text-verbatim
+    type: regex
+    target:
+      source: file
+      path: intent/2026-02-10-appointment-reminders/spec.md
+    pattern: "تم إلغاء موعدك"
+    weight: 1.0
+
+  - name: spec-is-english
+    type: llm
+    focus:
+      source: file
+      path: intent/2026-02-10-appointment-reminders/spec.md
+    weight: 3.0
+    criteria: |
+      This spec was written from a conversation in Arabic. The kit's rule: the spec file is English,
+      but text the product's users see is quoted in the language they see it in. Here patients see
+      Arabic, so the SMS texts stay Arabic, exactly as given.
+
+      PASS if ALL hold:
+      1. Headings, labels and prose are English, including `## For the product owner` (Part 1) and
+         `## Engineering detail` (Part 2), the requirements and the acceptance criteria.
+      2. The SMS texts patients receive are quoted in Arabic, not translated, e.g. "تم إلغاء موعدك"
+         and "تم تأكيد موعدك". Acceptance criteria quote them the same way.
+      3. Arabic appears only in those quoted user-facing texts, or in parentheses after an English
+         business term the first time it is used. Calendar statuses are given English names.
+      4. Numbers use the digits 0-9 outside the quoted texts.
+
+      FAIL if the spec is missing, if its prose or headings are Arabic, or if the patients' SMS text
+      is translated into English.
+
+  - name: back-translates-part-1
+    type: llm
+    focus: last_message
+    weight: 2.0
+    criteria: |
+      After writing the English spec, Claude should translate Part 1 (For the product owner) of the
+      file it wrote back into the user's language, Arabic, so the user can check it. Part 2
+      (engineering detail) is translated only if the user asks.
+
+      PASS if ALL hold:
+      1. The reply is in Arabic (technical words may stay in English inside Arabic sentences).
+      2. It renders Part 1's content in Arabic: at least what patients and receptionists get, and
+         how we'll know it works.
+      3. It doesn't translate the whole of Part 2.
+      4. It asks the user to check it or say what to fix, or goes on to the next step.
+
+      FAIL if the reply is in English, or only says the spec was written without rendering Part 1.

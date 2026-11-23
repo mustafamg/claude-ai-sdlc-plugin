@@ -39,6 +39,13 @@ Run commands from inside each project's directory.
   intents in a Claude Doc (`SDLC_REVIEW=doc`) and approves on the PR. Accepted intents are mirrored
   to Jira project `<KEY>` with `/sdlc-kit:sync-jira`; change the intent, not the ticket.>
 
+## Glossary
+
+<Delete unless the team talks in more than one language. Intents, specs and plans are written in
+English; the conversation follows whoever runs the skill. Business words and the English the files
+use for them, so every stage and teammate uses the same term, e.g. `موعد = appointment`,
+`غياب = no-show`.>
+
 ## Verifying your work
 
 Before calling a task done, run the check command for **every project you touched** (table above)

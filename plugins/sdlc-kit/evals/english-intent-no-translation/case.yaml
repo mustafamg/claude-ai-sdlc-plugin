@@ -1,0 +1,49 @@
+schema_version: "1.1"
+name: english-intent-no-translation
+description: An English conversation gets no language note, read-back translation or back-translation.
+tags: [behavior, language]
+runs: 2
+
+execution:
+  prompt: |
+    /sdlc-kit:new-intent Our clinics use the system to book appointments. The problem is no-shows:
+    about 20% of appointments last month, per the reception report, and doctors sit idle. We want to
+    send the patient an SMS reminder 24 hours before the appointment, and let them confirm or cancel
+    from the message. A cancelled slot goes back on sale. Affected: patients and receptionists.
+    We'll know it worked if no-shows drop below 10% within two months. Out of scope: WhatsApp
+    reminders and prepayment. Constraints: one message per appointment, and the message is in Arabic.
+    I think that covers it, write the intent.
+  max_turns: 24
+  timeout_seconds: 480
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+
+context:
+  scaffold_script: setup.sh
+
+graders:
+  - name: reply-has-no-arabic
+    type: regex
+    target: last_message
+    match: not_contains
+    pattern: "[\\u0600-\\u06FF]{3,}"
+    weight: 1.0
+
+  - name: no-translation-steps
+    type: llm
+    focus: last_message
+    weight: 2.0
+    criteria: |
+      The user wrote in English. The kit's language steps (saying the file will be written in
+      English, reading it back in the user's language, translating the written file back) are only
+      for conversations in another language. In English they are noise.
+
+      This may be the first reply of an interview that asks questions before writing, or it may
+      show the drafted intent. Either is fine.
+
+      PASS if ALL hold:
+      1. The reply is in English.
+      2. It doesn't say the file will be written in English, or mention languages or translation
+         at all (the requirement that the SMS text be in Arabic may of course be discussed).
+      3. It doesn't offer or give a translation or back-translation of the intent.
+
+      FAIL if any of these is broken.

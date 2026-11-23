@@ -21,6 +21,13 @@ This is **Stage 1 only**. Do not write `spec.md` or `plan.md` and do not change 
 **You do not approve the intent.** A human approves it by merging its PR. Your job is to make the
 intent complete enough that the decision is easy, and to record what was decided.
 
+## Language
+Talk in the user's language; keep the file in English. Discuss each open question and decision in the
+language the user writes in, with technical words kept in English. Write each decision to the
+Decisions table in English, using the intent's terms and `CLAUDE.md`'s **Glossary**, and read it back
+in the user's language before the status changes. The review doc, the PR and commits are English.
+In an English conversation there's nothing to translate.
+
 ## 1. Load context
 Read `CLAUDE.md`, `intent/README.md`, the intent itself, and the evidence it links to. If the intent
 has a PR, read it and its review comments (`gh pr view --comments`); decisions already made there must
