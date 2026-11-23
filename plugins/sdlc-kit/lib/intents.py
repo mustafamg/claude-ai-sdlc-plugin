@@ -2,7 +2,10 @@
 """Intents, stories and the relations between them, for the sdlc-kit. Run through bin/intents.
 
   intents status [<slug>]    each intent and story with the stage it has reached, drafts that exist
-                             only on docs/intent-* branches, and reserved slugs (named, not written)
+                             only on docs/intent-* branches, and reserved slugs (named, not written).
+                             Follow-ups sit under the intent whose follow-up marker promised them.
+                             Finished intents (shipped, superseded, rejected) are hidden and counted,
+                             unless a follow-up under them is still open; --all shows them
   intents check [<file>...]  relation and layout errors (exit 1) and warnings, for the whole repo or
                              only the named files
   intents deps <slug>        whether a story's (or a single-story intent's) dependencies are met;
@@ -914,15 +917,44 @@ def export_intent(model, it, rev):
 
 # ---------------------------------------------------------------- commands
 
-def cmd_status(model, only):
-    intents = sorted(model.intents, key=lambda i: i.folder)
-    folder = None
+FINISHED = ("shipped", "superseded", "rejected")
+
+
+def family(model):
+    """Follow-ups grouped under the intent that promised them: (children, also). children maps an
+    intent to the intents and reserved slugs whose slug its `→ follow-up:` markers name; a child
+    promised by several intents sits under the earliest, and also lists the others."""
+    by_folder = {it.folder: it for it in model.intents}
+    parents = {}
+    for slug, places in model.promises.items():
+        child = model.node(slug)[0] if slug in model.nodes else slug
+        for path, _ in places:
+            p = by_folder.get(folder_of(path))
+            if p is not None and p is not child and p not in parents.setdefault(child, []):
+                parents[child].append(p)
+    children, also = {}, {}
+    for child, ps in parents.items():
+        ps.sort(key=lambda i: i.folder)
+        if ps:
+            children.setdefault(ps[0], []).append(child)
+            also[child] = [p.slug for p in ps[1:]]
+    for kids in children.values():
+        kids.sort(key=lambda c: (isinstance(c, str), c if isinstance(c, str) else c.folder))
+    return children, also
+
+
+def cmd_status(model, only, show_all=False):
+    children, also = family(model)
+    res = model.reserved()
     if only:
         it, _ = model.node(only)
         if it is None:
             print(f"no intent or story named {only!r}", file=sys.stderr)
             return 2
-        intents, folder = [it], it.folder
+        roots, show_all = [it], True
+    else:
+        child_of = {c for kids in children.values() for c in kids}
+        roots = sorted((i for i in model.intents if i not in child_of), key=lambda i: i.folder)
 
     def detail(it, stage, since, deps):
         parts = []
@@ -936,24 +968,69 @@ def cmd_status(model, only):
         parts.append("waiting on " + ", ".join(unmet) if unmet else "")
         return ", ".join(p for p in parts if p)
 
-    rows = []
-    for it in intents:
+    def joined(*parts):
+        return ", ".join(p for p in parts if p)
+
+    def also_by(key):
+        return "also promised by " + ", ".join(also[key]) if also.get(key) else ""
+
+    shown = {}
+
+    def visible(key):
+        """Open work, or a finished intent with open work among its follow-ups."""
+        if show_all or isinstance(key, str):
+            return True
+        if key not in shown:
+            shown[key] = False  # a promise cycle can't make itself visible
+            shown[key] = (model.intent_stage(key) not in FINISHED
+                          or any(visible(c) for c in children.get(key, ())))
+        return shown[key]
+
+    rows, done = [], set()
+
+    def emit(key, depth):
+        name = "    " * (depth - 1) + "  ↳ " if depth else ""
+        sub = " " * (4 * depth + 2)
+        if isinstance(key, str):
+            e = res.get(key, {})
+            rows.append((name + key, "reserved",
+                         joined(also_by(key), "waited on by " + ", ".join(e["waiting"]) if e.get("waiting") else "")))
+            return
+        it = key
+        done.add(it)
+        header = not show_all and model.intent_stage(it) in FINISHED
         if it.has_stories:
             st = model.intent_stage(it)
             shipped = sum(model.unit_stage(u)[0] == "shipped" for u in it.live) if st == "in progress" else 0
             info = f"{shipped} of {len(it.live)} stories shipped" if st == "in progress" else ""
-            rows.append((it.folder, st, model.place(it) if st == "draft" else info))
-        for u in it.units:
+            rows.append((name + it.folder, st, joined(model.place(it) if st == "draft" else info, also_by(it))))
+        for u in it.units if not (header and it.has_stories) else ():
             stage, since = model.unit_stage(u)
             deps = model.deps_of(u) if stage not in ("shipped", "dropped", "rejected", "superseded") else ()
-            rows.append((f"  {u.sid} {u.slug}" if u.sid else it.folder, stage, detail(it, stage, since, deps)))
+            info = detail(it, stage, since, deps)
+            rows.append((sub + f"{u.sid} {u.slug}" if u.sid else name + it.folder, stage,
+                         info if u.sid else joined(info, also_by(it))))
+        for c in children.get(it, ()) if not only or depth == 0 else ():
+            if c not in done and visible(c):
+                emit(c, depth + 1)
+
+    for it in roots:
+        if visible(it):
+            emit(it, 0)
+    for it in sorted(model.intents, key=lambda i: i.folder) if not only else ():
+        if it not in done and visible(it):  # follow-ups that promise each other: no root reaches them
+            emit(it, 0)
+    hidden = 0 if only else sum(1 for i in model.intents if i not in done)
     print(f"Intents ({model.repo.base}):")
     if not rows:
         print("  none")
     w = max([len(r[0]) for r in rows] + [10])
     for name, stage, info in rows:
         print(f"  {name:<{w}}  {stage:<11}  {info}".rstrip())
-    res = model.reserved(folder)
+    if only:
+        res = model.reserved(roots[0].folder)
+    else:
+        res = {s: e for s, e in res.items() if s not in also}
     if res:
         print("Reserved (named, but no intent or story yet):")
         w = max(len(s) for s in res)
@@ -962,6 +1039,9 @@ def cmd_status(model, only):
             parts = [f"promised at {p}" for p in e["promised"]] + [f"named at {p}" for p in e["named"]]
             parts += ["waited on by " + ", ".join(e["waiting"])] if e["waiting"] else []
             print(f"  {slug:<{w}}  {'; '.join(parts)}")
+    if hidden:
+        print(f"{hidden} finished intent{'s' if hidden > 1 else ''} hidden (shipped, superseded or "
+              "rejected). Run `intents status --all` to show them.")
     return 0
 
 
@@ -1084,15 +1164,16 @@ def main(argv):
         print(f"intents: the default branch {repo.base!r} isn't a commit here. Fix --base or "
               "$INTENTS_BASE, or run `git fetch` if it's a remote branch.", file=sys.stderr)
         return 2
-    if cmd == "status" and len(args) <= 2:
-        return cmd_status(Model(repo, "base"), args[1] if len(args) > 1 else None)
+    if cmd == "status" and len(args) <= 3 and len([a for a in args[1:] if a != "--all"]) <= 1:
+        rest = [a for a in args[1:] if a != "--all"]
+        return cmd_status(Model(repo, "base"), rest[0] if rest else None, "--all" in args)
     if cmd == "check":
         return cmd_check(Model(repo, "worktree"), args[1:])
     if cmd == "deps" and len(args) == 2:
         return cmd_deps(Model(repo, "base"), normalize(args[1]))
     if cmd == "export" and len(args) <= 2:
         return cmd_export(Model(repo, "base"), normalize(args[1]) if len(args) > 1 else None)
-    print("usage: intents status [<slug>] | check [<file>...] | deps <slug> | export [<slug>] | hook  "
+    print("usage: intents status [--all] [<slug>] | check [<file>...] | deps <slug> | export [<slug>] | hook  "
           "[--base <ref>]",
           file=sys.stderr)
     return 2

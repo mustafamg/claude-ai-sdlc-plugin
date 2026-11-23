@@ -313,7 +313,7 @@ chmod +x "$SP/gh-merged/gh" "$SP/gh-open/gh"
 
 echo "== intents status: stages are derived from git"
 outp 0 "a merged feature branch is shipped" '2026-01-01-alpha +shipped +since 2026-01-09' "$I" status
-outp 0 "a squash merge body counts as shipped" '2026-01-06-zeta +shipped' "$I" status
+outp 0 "a squash merge body counts as shipped" '2026-01-06-zeta +shipped' "$I" status --all
 outp 0 "specced is dated by the merge, not the branch commit" '2026-01-02-beta +specced +since 2026-01-06' "$I" status
 outp 0 "step commits on an unmerged branch mean building" 'S1 g-one +building' "$I" status
 outp 0 "a story with nothing merged is accepted" 'S2 g-two +accepted' "$I" status
@@ -325,7 +325,13 @@ outp 0 "an intent with stories rolls up" '2026-01-03-gamma +in progress +0 of 3 
 outp 0 "deferred shows its revisit month" '2026-01-04-delta +deferred .*revisit 2026-06' "$I" status
 outp 0 "a draft only on origin's docs/intent-* branch is listed" '2026-01-07-epsilon +draft +on origin/docs/intent-epsilon' "$I" status
 outp 0 "unmet dependencies are shown" 'S3 g-three .*waiting on S2 \(needs to ship, is accepted\), chatui-accounts \(needs to ship, is reserved\)' "$I" status
-outp 0 "a follow-up marker reserves its slug" 'omega +promised at intent/2026-01-01-alpha/intent.md:10' "$I" status
+outp 0 "a follow-up marker reserves its slug" 'omega +promised at intent/2026-01-01-alpha/intent.md:10' "$I" status alpha
+outp 0 "a reserved follow-up sits under the intent that promised it" '^    ↳ omega +reserved' "$I" status
+outp 0 "a shipped intent with an open follow-up stays, as its header" '^  2026-01-01-alpha +shipped' "$I" status
+outn 0 "a shipped intent with no open follow-ups is hidden" 'zeta' "$I" status
+outp 0 "the hidden ones are counted" '^1 finished intent hidden .*intents status --all' "$I" status
+outn 0 "--all hides nothing and says nothing about it" 'hidden' "$I" status --all
+outn 0 "a grouped reserved slug isn't listed again under Reserved" '^  omega ' "$I" status
 outp 0 "a policy skill's marker reserves too" 'dify-gateway +promised at \.claude/skills/api-security/SKILL\.md' "$I" status
 outp 0 "a dependency on nothing is reserved, with who waits" 'chatui-accounts +named at .*waited on by g-three' "$I" status
 outn 0 "a non-policy skill's marker reserves nothing" 'helper-thing' "$I" status
@@ -333,7 +339,20 @@ outn 0 "status <slug> shows only that intent" '2026-01-01-alpha' "$I" status g-t
 outp 2 "status of an unknown slug" 'no intent or story' "$I" status nope
 mkintent 2026-01-08-eta accepted "- **Supersedes:** \`intent/2026-01-07-epsilon\` (never merged). Folded in below.\n"
 git add -A && git commit -qm "docs(intent): eta"
-outp 0 "a draft folded into a merged intent shows as superseded" '2026-01-07-epsilon +superseded +by eta, and its branch origin/docs/intent-epsilon still exists' "$I" status --base main
+outp 0 "a draft folded into a merged intent shows as superseded" '2026-01-07-epsilon +superseded +by eta, and its branch origin/docs/intent-epsilon still exists' "$I" status --all --base main
+mkintent 2026-01-09-iota accepted "" "- **Later.** → follow-up: kappa, omega"
+mkintent 2026-01-10-kappa accepted "" "- **Later still.** → follow-up: iota"
+printf '\n- **Bulk.** → follow-up: lambda\n' >> intent/2026-01-06-zeta/intent.md
+mkintent 2026-01-11-lambda rejected
+git add -A && git commit -qm "docs(intent): follow-ups"
+outp 0 "a follow-up intent sits under the intent that promised it" '^    ↳ 2026-01-10-kappa +accepted' "$I" status --base main
+outp 0 "a follow-up promised twice sits under the earliest, naming the others" '↳ omega +reserved +also promised by iota' "$I" status --base main
+outp 0 "intents that promise each other are still listed" '^  2026-01-09-iota +accepted' "$I" status --base main
+outn 0 "a finished follow-up under a finished intent is hidden" 'lambda' "$I" status --base main
+outp 0 "superseded and rejected intents count as finished" '^3 finished intents hidden' "$I" status --base main
+outp 0 "--all shows a finished follow-up in its place" '^    ↳ 2026-01-11-lambda +rejected' "$I" status --all --base main
+outp 0 "status <slug> shows its follow-ups" '↳ 2026-01-10-kappa' "$I" status iota --base main
+outn 0 "status <slug> hides nothing" 'hidden' "$I" status zeta --base main
 git branch -q develop "$(git log -1 --format=%H --grep='^docs(intent): intents$')"
 outp 0 "INTENTS_BASE picks the default branch" 'Intents \(develop\)' env INTENTS_BASE=develop "$I" status
 outp 0 "status is read from that branch" '2026-01-02-beta +accepted' env INTENTS_BASE=develop "$I" status

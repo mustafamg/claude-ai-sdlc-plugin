@@ -38,9 +38,10 @@ Read `CLAUDE.md`, `intent/README.md` and `intent/_TEMPLATE.md`. If `intent/` doe
 running `/sdlc-kit:init` first. Don't read other intents as examples: their constraints, decisions
 and scope leak into the new one.
 
-Run `intents status` (on your PATH while this plugin is enabled). It lists every intent with its
-stage, including drafts that exist only on other people's `docs/intent-*` branches, and **reserved
-slugs**: work other intents promised as a follow-up but nobody has written.
+Run `intents status --all` (on your PATH while this plugin is enabled). It lists every intent with
+its stage, including finished ones and drafts that exist only on other people's `docs/intent-*`
+branches, and **reserved slugs**: work other intents promised as a follow-up but nobody has written.
+A reserved slug sits under the intent that promised it; `intents status <that intent>` shows where.
 - **If the idea is a reserved slug's work,** use that slug for the folder, so the promise resolves to
   this intent, and say where it was promised.
 - **If an existing intent or draft overlaps the idea,** raise it before interviewing. This one may
