@@ -1,0 +1,55 @@
+schema_version: "1.1"
+name: arabic-intent-reads-back
+description: An idea given in Arabic gets an Arabic read-back, with a term list, before any intent.md is written.
+tags: [behavior, language]
+runs: 2
+
+execution:
+  prompt: |
+    /sdlc-kit:new-intent عندنا عيادات بتستخدم السيستم لحجز المواعيد. المشكلة إن نسبة الغياب عالية:
+    حوالي 20% من المواعيد الشهر اللي فات حسب تقرير الاستقبال، والدكتور بيقعد فاضي. عايزين نبعت
+    تذكير للمريض بالـ SMS قبل الموعد بـ 24 ساعة، والمريض يقدر يأكد أو يلغي من الرسالة. لو لغى،
+    الموعد يرجع متاح للحجز. المتأثرين: المرضى وموظفين الاستقبال. هنعرف إنه نجح لو نسبة الغياب نزلت
+    تحت 10% خلال شهرين. خارج النطاق: التذكير بالواتساب، والدفع المسبق. القيود: رسالة واحدة بس لكل
+    موعد، والرسالة بالعربي. أظن كده كل حاجة واضحة، اكتب الـ intent. لو فيه حاجة ناقصة، حط اقتراحك
+    في الأسئلة المفتوحة وماتوقفنيش أجاوب عليها دلوقتي.
+  max_turns: 20
+  timeout_seconds: 420
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+
+context:
+  scaffold_script: setup.sh
+
+graders:
+  - name: no-file-before-read-back
+    type: file_exists
+    path: "intent/*/intent.md"
+    exists: false
+    weight: 2.0
+
+  - name: reads-back-in-arabic
+    type: llm
+    focus: last_message
+    weight: 3.0
+    criteria: |
+      The user wrote in Arabic. The kit's rule: the conversation follows the user's language, but
+      intent.md is always written in English. Before writing it, Claude reads back, in the user's
+      language, what it will write, so a writer whose English is weaker can correct it first.
+
+      The user asked for anything missing to go under open questions with a proposed answer, rather
+      than as questions now. So the first reply should be the read-back, ending with a request to
+      confirm it. Do not require a written file.
+
+      PASS if ALL hold:
+      1. The reply is in Arabic (technical words such as intent, SMS or token may stay in English
+         inside Arabic sentences).
+      2. It says, once, that the file will be written in English.
+      3. It contains a read-back of what will be written: at least the problem, the desired
+         outcomes (numbered or listed), and what is out of scope (WhatsApp, prepayment).
+      4. It contains a term list pairing the business words with the English the file will use,
+         e.g. موعد = appointment, غياب = no-show (at least two pairs).
+      5. It asks the user to confirm or correct the read-back before the file is written, and it
+         doesn't claim the file is already written.
+
+      FAIL if the reply is in English, if there is no read-back or no term list, or if it says the
+      intent has been written.

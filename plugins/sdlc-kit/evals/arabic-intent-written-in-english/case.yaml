@@ -1,0 +1,88 @@
+schema_version: "1.1"
+name: arabic-intent-written-in-english
+description: After an Arabic read-back is confirmed, intent.md is written in English and translated back from the file.
+tags: [behavior, language]
+runs: 2
+
+# The case is single-turn, so the prompt carries the earlier turns: the idea, the read-back Claude
+# gave, and the user's confirmation.
+execution:
+  prompt: |
+    /sdlc-kit:new-intent ده كلامنا لحد دلوقتي:
+
+    أنا: عندنا عيادات بتستخدم السيستم لحجز المواعيد. المشكلة إن نسبة الغياب عالية: حوالي 20% من
+    المواعيد الشهر اللي فات حسب تقرير الاستقبال، والدكتور بيقعد فاضي. عايزين نبعت تذكير للمريض
+    بالـ SMS قبل الموعد بـ 24 ساعة، والمريض يقدر يأكد أو يلغي من الرسالة. لو لغى، الموعد يرجع
+    متاح للحجز. المتأثرين: المرضى وموظفين الاستقبال. هنعرف إنه نجح لو نسبة الغياب نزلت تحت 10% خلال
+    شهرين. خارج النطاق: التذكير بالواتساب، والدفع المسبق. القيود: رسالة واحدة بس لكل موعد، والرسالة
+    بالعربي.
+
+    Claude: الملف هيتكتب بالإنجليزي، وده ملخص اللي هكتبه:
+    - المشكلة: حوالي 20% من المواعيد بيحصل فيها غياب، فالدكتور بيقعد فاضي.
+    - النتائج المطلوبة: (1) المريض يوصله تذكير SMS قبل الموعد بـ 24 ساعة. (2) يقدر يأكد أو يلغي من
+      الرسالة. (3) الموعد الملغي يرجع متاح للحجز. هنعرف إنه نجح لو الغياب نزل تحت 10% خلال شهرين.
+    - خارج النطاق: الواتساب، والدفع المسبق.
+    - القيود: رسالة واحدة لكل موعد، ونص الرسالة بالعربي.
+    - أسئلة مفتوحة: لو الموعد اتحجز قبل أقل من 24 ساعة؟ المقترح: مانبعتش تذكير.
+    - المصطلحات: موعد = appointment، غياب = no-show، موظف الاستقبال = receptionist، تأكيد = confirm.
+
+    أنا: تمام، الملخص مظبوط والمقترح موافق عليه. اكتب الملف في
+    intent/2026-02-10-appointment-reminders/intent.md (ده تاريخ الطلب).
+  max_turns: 24
+  timeout_seconds: 480
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+
+context:
+  scaffold_script: setup.sh
+
+graders:
+  - name: intent-file-written
+    type: file_exists
+    path: intent/2026-02-10-appointment-reminders/intent.md
+    weight: 1.0
+
+  - name: file-is-english
+    type: llm
+    focus:
+      source: file
+      path: intent/2026-02-10-appointment-reminders/intent.md
+    weight: 3.0
+    criteria: |
+      This is the intent.md Claude wrote after a conversation in Arabic. The kit's rule: the file
+      is always English, even when the conversation is Arabic, because the parser reads its
+      keywords and English-speaking teammates read its prose. An `<name>` placeholder in the
+      Author field is fine.
+
+      PASS if ALL hold for the file as finally written:
+      1. Every heading, header field and keyword is in English: `# Intent:`, `**Status:** draft`,
+         `## Problem`, `## Desired outcome`, `## Out of scope`, and so on.
+      2. The prose is English. An Arabic business word may appear only in parentheses after its
+         English term, the first time it is used, e.g. "no-show (غياب)". The quoted text of the SMS
+         that patients will receive may be Arabic, since patients read it.
+      3. Numbers use the digits 0-9, not Eastern Arabic digits (٠-٩), and lists use "," not "،".
+      4. It uses the agreed terms: appointment, no-show, receptionist.
+      5. It keeps the agreed content: the 24-hour SMS reminder, confirm or cancel from the message,
+         a cancelled slot becomes bookable, under 10% no-shows within two months, WhatsApp and
+         prepayment out of scope.
+
+      FAIL if no intent.md was written, or if any of 1–3 is broken.
+
+  - name: back-translates-the-file
+    type: llm
+    focus: last_message
+    weight: 2.0
+    criteria: |
+      After writing intent.md in English, Claude should translate the file it wrote back into the
+      user's language (Arabic), so the user can check the English says what they meant. This is a
+      translation of the file, in the chat, not a new document.
+
+      PASS if ALL hold:
+      1. The reply is in Arabic (technical words may stay in English inside Arabic sentences).
+      2. It gives an Arabic rendering of the written file's content: at least the problem, the
+         outcomes and the out-of-scope items.
+      3. It asks the user to check it or say what to fix.
+
+      Going on to mention branching or opening a PR afterwards is fine.
+
+      FAIL if the reply is in English, or if it only says the file was written without rendering
+      its content in Arabic.

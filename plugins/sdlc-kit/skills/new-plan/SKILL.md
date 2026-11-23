@@ -16,6 +16,9 @@ stories at `specced` (or `accepted` with a recorded "no spec needed"), then ask 
 This is **Stage 3 only**. Write no code and change no tests. The output is a plan a new team member
 could build from without asking questions.
 
+**Language:** talk in the user's language; `plan.md`, commits and the PR are English, with technical
+words kept in English in the conversation.
+
 ## 1. Gate
 Stop and say why if any of these fail:
 - `intent.md` is on the default branch with `Status: accepted`.
