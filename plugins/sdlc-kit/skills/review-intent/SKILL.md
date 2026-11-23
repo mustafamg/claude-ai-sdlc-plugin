@@ -9,8 +9,9 @@ argument-hint: "[intent folder | backlog]"
 Intent folder: **$ARGUMENTS**
 
 If that's empty, run `intents status` (on your PATH while this plugin is enabled; if it can't run,
-read `intent/*/intent.md` and search for `follow-up:` markers yourself) and list every
-intent that isn't `accepted`, with its status, its open question count, and its PR if it has one.
+read `intent/*/intent.md` and `intent/archive/*/intent.md`, and search for `follow-up:` markers
+yourself) and list every intent that isn't `accepted`, with its status, its open question count, and
+its PR if it has one.
 Include drafts that exist only on other `docs/intent-*` branches; `intents status` shows them. Also
 list `deferred` intents whose **Revisit** month has arrived, and the **reserved slugs**: work an
 intent promised as a follow-up, or depends on, that nobody has written yet. Ask which one to review.
@@ -77,7 +78,7 @@ The listed open questions are the easy half. Review the whole intent for what it
 - **An uncovered policy surface:** the intent touches an area no policy skill covers. Note it; never
   imply a policy checked it.
 - **Duplicates.** Look for an intent that overlaps, supersedes, or is superseded by this one: in
-  `intent/*/intent.md`, and in the drafts on other branches that `intents status` lists. A draft is
+  `intent/*/intent.md`, `intent/archive/*/intent.md`, and in the drafts on other branches that `intents status` lists. A draft is
   invisible from this branch otherwise. If this intent replaces one, record it with **Supersedes**,
   and say the other's PR should be closed.
 - **A solution in place of a problem.** Ask what problem it solves.

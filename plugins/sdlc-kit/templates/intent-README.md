@@ -55,7 +55,9 @@ Write them so they can be checked, not as prose:
 `intents status` shows where every intent and story stands, worked out from git: drafts on other
 branches, specced, planned, building, shipped. It also lists reserved slugs and who waits on them.
 Follow-ups sit under the intent that promised them. Finished intents are hidden and counted unless a
-follow-up under them is still open; `intents status --all` shows them.
+follow-up under them is still open; `intents status --all` shows them. To clear finished intents out
+of this folder, run `intents archive` on a clean branch: it moves them into `intent/archive/` and
+fixes the links, and they keep counting everywhere.
 `intents check` reports broken relations, and a hook runs it whenever Claude writes a file here.
 
 ## Unlocking tests

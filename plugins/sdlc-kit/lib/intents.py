@@ -14,6 +14,11 @@
                              each story's title, a ready-made description and its digest, what it's
                              blocked by, its stage, and its spec's acceptance table and plan's steps
                              once they're merged
+  intents archive [--dry-run] moves every shipped, superseded or rejected intent folder into
+                             intent/archive/ with git mv, and fixes the paths and relative links
+                             that pointed into it; run it on a clean branch off the default branch.
+                             The only command that changes files. Archived intents are read like
+                             any other, so refs to them keep working
   intents hook               PostToolUse mode: reads the hook JSON on stdin and checks the file written
 Options: --base <ref> picks the default branch (else $INTENTS_BASE, origin/HEAD, origin/main,
 origin/master, main, master). Nothing here fetches: run `git fetch` first to see others' drafts.
@@ -295,9 +300,22 @@ def scannable(path):
                 or re.fullmatch(r"\.claude/skills/[^/]+/SKILL\.md", path))
 
 
+ARCHIVE = "archive"
+
+
 def folder_of(path):
-    m = re.match(r"intent/([^/]+)/", path)
-    return m.group(1) if m else None
+    """The intent folder a path is in: `<name>`, or `archive/<name>` once it's archived."""
+    m = re.match(r"intent/((?:archive/)?[^/]+)/", path)
+    return m.group(1) if m and m.group(1) != ARCHIVE else None
+
+
+def unarchived(folder):
+    return folder.split("/", 1)[1] if folder.startswith(ARCHIVE + "/") else folder
+
+
+def is_intent_md(path):
+    f = folder_of(path)
+    return bool(f) and path == f"intent/{f}/intent.md"
 
 
 # ---------------------------------------------------------------- git
@@ -391,7 +409,7 @@ class Repo:
         for ref in self.draft_refs:
             sha, kind, data = trees.get(f"{ref}:intent", (b"", "", b""))
             for mode, name in tree_entries(sha, data) if kind == "tree" else ():
-                if mode == "40000" and name not in skip:
+                if mode == "40000" and name not in skip and name != ARCHIVE:
                     found.setdefault(f"intent/{name}/intent.md", ref)
         got = self.cat([f"{ref}:{p}" for p, ref in found.items()])
         return {p: (decode(got[f"{ref}:{p}"][2]), ref) for p, ref in found.items() if f"{ref}:{p}" in got}
@@ -451,12 +469,22 @@ class History:
                 self.started[slug] = min(date, self.started.get(slug, date))
                 if kind == "feat" and h in on_base:
                     self.shipped[slug] = max(date, self.shipped.get(slug, date))
-        out = repo.git("log", repo.base, "--first-parent", "-m", "--diff-filter=A", "--name-only",
+        out = repo.git("log", repo.base, "--first-parent", "-m", "-M", "--diff-filter=AR", "--name-status",
                        "--format=%x1e%cs", "--", "intent") or ""
+        moves = []
         for rec in out.split("\x1e"):
             lines = [x for x in rec.split("\n") if x.strip()]
-            for f in lines[1:]:
-                self.added.setdefault(f, lines[0])
+            for entry in lines[1:]:
+                kind, *paths = entry.split("\t")
+                if kind == "A":
+                    self.added.setdefault(paths[0], lines[0])
+                elif len(paths) == 2:
+                    moves.append(paths)
+        # A moved file (intents archive) keeps the date it first reached the default branch. The log
+        # runs newest first, so resolve the oldest move first.
+        for old, new in reversed(moves):
+            if old in self.added:
+                self.added[new] = self.added[old]
 
 
 # ---------------------------------------------------------------- the model
@@ -469,24 +497,34 @@ class Model:
     def __init__(self, repo, view):
         self.repo = repo
         wt = {p: repo.read_worktree(p) for p in repo.worktree_paths()}
-        base = repo.blobs(repo.base, sorted(p for p in repo.base_paths
-                                            if scannable(p) and (view == "base" or p not in wt)))
+        on_disk = {folder_of(p) for p in wt} - {None}
+        names = {unarchived(f) for f in on_disk}
+
+        def elsewhere(f):
+            """A merged folder this checkout holds at its other place: archived on one side only."""
+            return f is not None and f not in on_disk and unarchived(f) in names
+
+        base = repo.blobs(repo.base, sorted(p for p in repo.base_paths if scannable(p) and (
+            view == "base" or (p not in wt and not elsewhere(folder_of(p))))))
         if view == "worktree":
             texts = {**base, **wt}
         else:
-            texts = {**{p: t for p, t in wt.items() if folder_of(p) not in repo.base_folders}, **base}
+            merged = {unarchived(f) for f in repo.base_folders}  # a checkout from before or after an archive
+            texts = {**{p: t for p, t in wt.items()
+                        if folder_of(p) is None or unarchived(folder_of(p)) not in merged}, **base}
         self.texts = {p: t for p, t in texts.items() if folder_of(p) or is_policy(t)}
         self.branch = {}  # folder -> the docs/intent-* branch a draft was read from
         skip = {folder_of(p) for p in self.texts} | repo.base_folders
+        # A docs/intent-* branch cut before an archive PR still holds the old folders: not drafts.
+        skip |= {unarchived(f) for f in skip if f}
         for path, (text, ref) in repo.drafts(skip).items():
             self.texts[path] = text
             self.branch[folder_of(path)] = ref
         self.local = [p for p in sorted(self.texts) if folder_of(p) not in self.branch]
         self.intents, self.problems = [], []
         for path in sorted(self.texts):
-            m = re.fullmatch(r"intent/([^/]+)/intent\.md", path)
-            if m:
-                it, probs = parse_intent(m.group(1), self.where(path), self.texts[path])
+            if is_intent_md(path):
+                it, probs = parse_intent(folder_of(path), self.where(path), self.texts[path])
                 self.intents.append(it)
                 self.problems += probs
         self.nodes = {}  # slug -> the intents with stories, stories and single-story units using it
@@ -1045,6 +1083,90 @@ def cmd_status(model, only, show_all=False):
     return 0
 
 
+LINK = re.compile(r"(\]\()([^)\s]+)(\))")
+
+
+def cmd_archive(model, dry_run):
+    """Move every finished intent folder into intent/archive/ with git mv, and fix the paths and
+    relative links that pointed into it. The working tree must hold the default branch, clean."""
+    repo, root = model.repo, model.repo.root
+    todo = [it for it in sorted(model.intents, key=lambda i: i.folder)
+            if it.folder in repo.base_folders and not it.folder.startswith(ARCHIVE + "/")
+            and model.intent_stage(it) in FINISHED]
+    if not todo:
+        print("nothing to archive: no shipped, superseded or rejected intent outside intent/archive/")
+        return 0
+    if not dry_run and repo.git("merge-base", "--is-ancestor", repo.base, "HEAD") is None:
+        print(f"intents archive: this checkout doesn't contain {repo.base}. Branch off it first, e.g. "
+              f"`git switch -c chore/archive-intents {repo.base}`.", file=sys.stderr)
+        return 2
+    if not dry_run and (repo.git("status", "--porcelain", "--", "intent", ".claude/skills", "CLAUDE.md") or "").strip():
+        print("intents archive: intent/, .claude/skills or CLAUDE.md has uncommitted changes. Commit or "
+              "set them aside first, so the archive PR holds only the moves.", file=sys.stderr)
+        return 2
+    print(("Would archive" if dry_run else "Archiving") + f" {len(todo)} intent{'s' if len(todo) > 1 else ''}:")
+    for it in todo:
+        print(f"  {it.folder:<40}  {model.intent_stage(it)}")
+    if dry_run:
+        return 0
+    moved = {f"intent/{it.folder}": f"intent/{ARCHIVE}/{it.folder}" for it in todo}
+
+    def new_path(path):
+        for old, new in moved.items():
+            if path == old or path.startswith(old + "/"):
+                return new + path[len(old):]
+        return path
+
+    # Every file whose text may name a moved path, read before the moves (keyed by its old path).
+    texts = {}
+    for top in ("intent", ".claude/skills"):
+        for dirpath, dirnames, filenames in os.walk(os.path.join(root, top)):
+            dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+            for f in filenames:
+                if f.endswith(".md"):
+                    rel = os.path.relpath(os.path.join(dirpath, f), root).replace(os.sep, "/")
+                    texts[rel] = open(os.path.join(dirpath, f), encoding="utf-8").read()
+    if os.path.isfile(os.path.join(root, "CLAUDE.md")):
+        texts["CLAUDE.md"] = open(os.path.join(root, "CLAUDE.md"), encoding="utf-8").read()
+    os.makedirs(os.path.join(root, "intent", ARCHIVE), exist_ok=True)
+    for old, new in moved.items():
+        if run_git(root, "mv", old, new) is None:
+            print(f"intents archive: `git mv {old} {new}` failed; nothing after it was moved", file=sys.stderr)
+            return 1
+    names = "|".join(re.escape(it.folder) for it in todo)
+    bare = re.compile(r"(?<![\w/.-])intent/(" + names + r")(?![\w-])")
+
+    def fix_link(m, old_file):
+        target = m.group(2)
+        if re.match(r"[a-z][a-z0-9+.-]*:|#|/", target, re.I):
+            return m.group(0)
+        path, _, anchor = target.partition("#")
+        was = os.path.normpath(os.path.join(os.path.dirname(old_file), path)).replace(os.sep, "/")
+        if was.startswith("../") or was == "..":
+            return m.group(0)
+        now_file, now = new_path(old_file), new_path(was)
+        if now_file == old_file and now == was:
+            return m.group(0)
+        rel = os.path.relpath(now, os.path.dirname(now_file) or ".").replace(os.sep, "/")
+        rel += "/" if path.endswith("/") and not rel.endswith("/") else ""
+        return m.group(1) + rel + ("#" + anchor if anchor else "") + m.group(3)
+
+    changed = []
+    for old_file, text in sorted(texts.items()):
+        out = LINK.sub(lambda m: fix_link(m, old_file), bare.sub(lambda m: f"intent/{ARCHIVE}/{m.group(1)}", text))
+        if out != text:
+            with open(os.path.join(root, new_path(old_file)), "w", encoding="utf-8") as f:
+                f.write(out)
+            changed.append(new_path(old_file))
+    if changed:
+        run_git(root, "add", "--", *changed)
+    print(f"Moved {len(todo)} folder{'s' if len(todo) > 1 else ''} into intent/{ARCHIVE}/ with git mv"
+          + (f", and fixed paths and links in {len(changed)} file{'s' if len(changed) > 1 else ''}" if changed else "")
+          + ". Everything is staged: commit it on its own and open a PR, e.g. "
+          "`git commit -m \"chore(intent): archive finished intents\"`.")
+    return 0
+
+
 def cmd_check(model, files):
     probs = sorted({*model.check(), *(p for path in model.local for p in prose_warnings(path, model.texts[path]))})
     if files:
@@ -1171,9 +1293,12 @@ def main(argv):
         return cmd_check(Model(repo, "worktree"), args[1:])
     if cmd == "deps" and len(args) == 2:
         return cmd_deps(Model(repo, "base"), normalize(args[1]))
+    if cmd == "archive" and set(args[1:]) <= {"--dry-run"}:
+        return cmd_archive(Model(repo, "base"), "--dry-run" in args)
     if cmd == "export" and len(args) <= 2:
         return cmd_export(Model(repo, "base"), normalize(args[1]) if len(args) > 1 else None)
-    print("usage: intents status [--all] [<slug>] | check [<file>...] | deps <slug> | export [<slug>] | hook  "
+    print("usage: intents status [--all] [<slug>] | check [<file>...] | deps <slug> | export [<slug>] | "
+          "archive [--dry-run] | hook  "
           "[--base <ref>]",
           file=sys.stderr)
     return 2

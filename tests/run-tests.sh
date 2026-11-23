@@ -361,6 +361,37 @@ outp 2 "a default branch that doesn't exist is refused" "'origin/nope' isn't a c
 git branch -q -D develop
 git reset -q --hard origin/main
 
+echo "== intents archive"
+printf '\nSee [beta](../2026-01-02-beta/intent.md) and `intent/2026-01-06-zeta/intent.md`.\n' >> intent/2026-01-01-alpha/intent.md
+printf '\nBuilt on [alpha](../2026-01-01-alpha/intent.md#problem), [site](https://x.y/intent/2026-01-01-alpha).\n' >> intent/2026-01-02-beta/intent.md
+mkintent 2026-01-15-mu rejected
+git add -A && at 2026-01-14 git commit -qm "docs(intent): links, mu"
+outp 0 "--dry-run lists the finished intents" 'Would archive 3 intents' "$I" archive --dry-run --base main
+[[ -d intent/2026-01-01-alpha ]]; expect 0 "--dry-run moves nothing" "$?"
+echo x >> intent/2026-01-02-beta/intent.md
+outp 2 "uncommitted intent changes are refused" 'uncommitted changes' "$I" archive --base main
+git checkout -q -- .
+outp 0 "archive moves shipped and rejected intents" 'Moved 3 folders .*fixed paths and links in 2 files' "$I" archive --base main
+[[ -f intent/archive/2026-01-01-alpha/spec.md && ! -e intent/2026-01-01-alpha ]]; expect 0 "the whole folder moves" "$?"
+[[ -d intent/2026-01-02-beta && -d intent/2026-01-03-gamma && -d intent/2026-01-04-delta ]]; expect 0 "open and deferred intents stay" "$?"
+[[ -z "$(git status --porcelain | grep -v '^[RM] ')" ]]; expect 0 "everything is staged as moves" "$?"
+outp 0 "a link into an archived folder is fixed" '\(\.\./archive/2026-01-01-alpha/intent\.md#problem\)' cat intent/2026-01-02-beta/intent.md
+outp 0 "an archived file's links out are fixed" '\(\.\./\.\./2026-01-02-beta/intent\.md\)' cat intent/archive/2026-01-01-alpha/intent.md
+outp 0 "a repo path to an archived folder is fixed" '`intent/archive/2026-01-06-zeta/intent\.md`' cat intent/archive/2026-01-01-alpha/intent.md
+outp 0 "a URL is left alone" 'https://x\.y/intent/2026-01-01-alpha\)' cat intent/2026-01-02-beta/intent.md
+at 2026-01-20 git commit -qm "chore(intent): archive finished intents"
+outn 0 "refs to archived intents still resolve" 'error|isn.t an intent' "$I" check
+outp 0 "an archived intent is read" 'archive/2026-01-01-alpha +shipped +since 2026-01-09' "$I" status --all --base main
+outp 0 "a moved file keeps the date it was merged" 'archive/2026-01-15-mu +rejected +since 2026-01-14' "$I" status --all --base main
+outp 0 "its follow-ups stay under it" '↳ omega +reserved' "$I" status --base main
+outn 0 "a dependency on an archived intent is met" 'alpha \(needs' "$I" status --base main
+outp 0 "archiving twice does nothing" 'nothing to archive' "$I" archive --base main
+git switch -q -c feat/old origin/main
+outn 0 "a branch from before the archive doesn't list an intent twice" '^  2026-01-01-alpha ' "$I" status --all --base main
+outn 0 "nor does check" 'also used by' "$I" check --base main
+git switch -q main && git branch -q -D feat/old
+git reset -q --hard origin/main && git clean -fdq intent
+
 echo "== intents deps"
 outp 0 "within an intent, a story waits only for the other's spec" 'met +S1: needs its spec merged; it.s building' "$I" deps g-two
 outp 1 "unmet dependencies exit 1" 'UNMET +chatui-accounts: needs to ship; it.s reserved' "$I" deps g-three
