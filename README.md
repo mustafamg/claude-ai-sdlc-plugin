@@ -150,7 +150,7 @@ That **reserves** `guest-chat-retention`:
 The marker works anywhere in an intent folder (intent, spec or plan) and in policy skills. If Claude
 writes "a separate intent" or "a follow-up" with no marker, the hook adds a reminder.
 
-Four commands, on PATH while the plugin is enabled. None of them changes anything:
+Five commands, on PATH while the plugin is enabled. Only `intents archive` changes anything:
 - **`intents status [<slug>]`** derives every stage from git and is never declared: draft (including
   drafts that exist only on `docs/intent-*` branches), the intent's Status, then specced, planned,
   building and shipped. It also lists reserved slugs and who waits on them.
@@ -167,6 +167,12 @@ Four commands, on PATH while the plugin is enabled. None of them changes anythin
   ready-made description and its digest, what it's blocked by, its stage, and once they're merged,
   its spec's acceptance table and its plan's steps. `/sdlc-kit:sync-jira` builds tickets from it,
   and a team on another tracker can build its own sync the same way.
+- **`intents archive [--dry-run]`** moves every shipped, superseded or rejected intent folder into
+  `intent/archive/` with `git mv`, and fixes the repo paths (`intent/<folder>/…`) and relative links
+  that pointed into it, in `intent/`, `.claude/skills` and `CLAUDE.md`. Deferred intents stay. Run it
+  by hand on a clean branch off the default branch and open the moves as their own PR. Archived
+  intents are read like any other, so their slugs, follow-ups and the dates they were merged keep
+  working, and a branch cut before the archive doesn't see them twice. Jira tickets are untouched.
 
 The skills rely on these:
 - `/sdlc-kit:new-intent` and `/sdlc-kit:review-intent` read `status` to find overlaps, drafts on other
