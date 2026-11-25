@@ -571,6 +571,24 @@ ireset
 subst $B "#10" "S2"
 CLAUDE_PROJECT_DIR=/nonexistent hook 2 "the repo comes from the file, not CLAUDE_PROJECT_DIR" "$IH" "$(iedit $B 'S2')"
 ireset
+
+echo "== intents: an adoption record (what /sdlc-kit:adopt writes)"
+# The adoption is its own first intent: no spec or plan, shipped by the commit that carries it, with
+# the project's unfinished work reserved as follow-ups.
+AD="$SP/ad"
+mkdir -p "$AD" && cd "$AD" || exit 1
+git init -q -b main && git config user.email t@t && git config user.name t
+echo x > app.txt && git add -A && git commit -qm init
+mkintent 2026-11-16-adopt-sdlc-kit accepted "" \
+  "- Finish the export. → follow-up: csv-export\n- A working check command. → follow-up: test-baseline"
+git add -A && git commit -qm "feat(adopt-sdlc-kit): step 1: adopt sdlc-kit (#7)"  # as a squash merge titles it
+outp 0 "an adoption record with no spec shows as shipped" 'adopt-sdlc-kit +shipped' "$I" status --base main
+outp 0 "its candidates are reserved slugs" 'csv-export +reserved' "$I" status --base main
+outp 0 "the second candidate is reserved too" 'test-baseline +reserved' "$I" status --base main
+outp 0 "check finds no problems" 'no problems found' "$I" check --base main
+"$I" archive >/dev/null && git commit -qm "chore(intent): archive finished intents"
+outp 0 "archived, the adoption is still shipped" 'adopt-sdlc-kit +shipped' "$I" status --base main
+outp 0 "archived, its candidates stay reserved" 'csv-export +reserved' "$I" status --base main
 cd "$SP" || exit 1
 
 echo "== $pass passed, $fail failed"
