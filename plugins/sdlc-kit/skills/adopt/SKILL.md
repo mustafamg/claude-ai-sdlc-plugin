@@ -25,26 +25,29 @@ before the branch exists (end of §2), and nothing is committed before the proof
 Stop and say what's needed whenever a check below fails.
 
 - **A git repo with at least one commit.**
-- **A clean working tree.** If `git status --porcelain` prints anything, stop: the user commits or
-  stashes it first. Never commit, stash or discard their changes yourself. The one exception is an
-  earlier run of this skill that stopped halfway: if the current branch is `chore/adopt-sdlc-kit`
-  or a numbered one such as `chore/adopt-sdlc-kit-2`, show `git status` and ask whether those are the adoption's own changes. If they are, continue from
+- **A clean working tree,** except with `--survey`, which only reads. If `git status --porcelain`
+  prints anything, stop: the user commits or stashes it first. Never commit, stash or discard their
+  changes yourself. The one exception is an earlier run of this skill that stopped halfway: if the
+  current branch is `chore/adopt-sdlc-kit` or a numbered one such as `chore/adopt-sdlc-kit-2`, show
+  `git status` and ask whether those are the adoption's own changes. If they are, continue from
   where it stopped.
 - **A remote.** The kit counts a merged PR as approval, and works out every stage from the default
-  branch. With no remote, run §1 and §2 so the user sees the survey, then stop: they add a remote
-  first. With a remote but without `gh`, carry on, and in §10 push the branch and give the user the PR
+  branch. With no remote, run §1 and §2 up to the user's confirmation, as `--survey` does, then
+  stop without creating a branch: they add a remote first. With a remote but without `gh`, carry on, and in §10 push the branch and give the user the PR
   title and body to open by hand.
 - **Already set up?** If `intent/README.md` exists and `CLAUDE.md` mentions `/sdlc-kit:`, then
   `/sdlc-kit:init` ran here, or this skill did. Say so. Run §1 and §2 as usual, so the user still
-  confirms every row. In §6, skip every file that already exists; never create a second copy. Then
-  carry on through §7 to §10.
-- **Already recorded?** If a folder `intent/*-adopt-sdlc-kit/` exists, the adoption has its intent.
+  confirms every row. In §6, never create a second copy of a file that already exists; merge into it
+  and show the diff, as `/sdlc-kit:init` does. Then carry on through §7 to §10.
+- **Already recorded?** If a folder `intent/*-adopt-sdlc-kit/` or `intent/archive/*-adopt-sdlc-kit/`
+  exists, the adoption has its intent (`intents archive` moves it there once it has shipped).
   Don't write a second one: two intents with one slug is an error in `intents check`. Add new
   candidates to its Out of scope instead (§7).
 - **The branch.** This skill works on `chore/adopt-sdlc-kit`, the same name `/sdlc-kit:init` uses,
   or a numbered one (`chore/adopt-sdlc-kit-2`, `-3`, …). Git can't tell whether a squash-merged
   branch was merged, so check each existing one with
-  `gh pr list --head <branch> --state merged`:
+  `gh pr list --head <branch> --state merged`. Without `gh`, ask the user whether each one was
+  merged; never guess from the commits:
   - **A branch with a merged PR** is finished work. So is the unnumbered one when
     `intent/README.md` is already on the default branch.
   - **An unfinished one** (no merged PR, and commits or changes the default branch doesn't have):
@@ -173,7 +176,8 @@ So the adoption is written as an intent, and each candidate from §3 becomes a f
 tracks.
 
 Write `intent/<today>-adopt-sdlc-kit/intent.md` from `intent/_TEMPLATE.md`:
-- **Problem** and **Desired outcome:** why the project is moving, in the user's own words.
+- **Problem** and **Desired outcome:** why the project is moving, from what the user said. Write it in
+  English, like every intent; quote the user's own words only where the exact term matters.
 - **Where we are today:** the confirmed keep / move / remove / add table from §2. Don't add a heading
   of your own for it; `intents` reads only the template's headings.
 - **Decisions:** the template's table (question, resolution, who, date), one row per choice the user
@@ -190,8 +194,9 @@ Write `intent/<today>-adopt-sdlc-kit/intent.md` from `intent/_TEMPLATE.md`:
 - Delete every template section that doesn't apply, such as Stories, Depends on, Supersedes and
   Revisit.
 
-If §0 found the adoption already recorded, add the new candidates to that intent's Out of scope and
-note the change in its Decisions. Keep its Status.
+If §0 found the adoption already recorded, add the new candidates to that intent's Out of scope, in
+the folder where it is now (under `intent/archive/` if it was archived), and note the change in its
+Decisions. Keep its Status.
 
 Once this merges with the commit subject from §9, `intents status` shows the adoption as `shipped`,
 with no spec or plan, and lists every candidate as a **reserved** slug. `/sdlc-kit:new-intent` picks a

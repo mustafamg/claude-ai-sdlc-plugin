@@ -16,10 +16,13 @@ and ask first. `--minimal` skips the optional steps (6–8), but never §8's def
   the same test `/sdlc-kit:adopt` uses), this is a re-run, for example to add a setting. Don't
   redirect: fill in only what's missing. If an old workflow still runs beside the kit (the signs
   below), mention that `/sdlc-kit:adopt` can retire it.
-- **Otherwise, if the project already has a workflow,** stop and suggest `/sdlc-kit:adopt` instead.
-  Signs: rules in `AGENTS.md` or `.cursorrules`; a `CLAUDE.md` that already describes how features get
-  planned; loose plan or todo files; a `.specify/` folder or project skills that plan or build;
-  unfinished feature branches. This skill only adds; `adopt` also converts and retires what's there.
+- **Otherwise, if the project already has an AI workflow,** stop and suggest `/sdlc-kit:adopt`
+  instead. Signs: rules in `AGENTS.md`, `.cursorrules` or `.github/copilot-instructions.md`; a
+  `CLAUDE.md` that already describes how features get planned; a `.specify/` folder or project skills
+  that plan or build. This skill only adds; `adopt` also converts and retires what's there.
+- **Loose plan or todo files, or unfinished feature branches,** on their own are common in any repo.
+  Mention that `/sdlc-kit:adopt` can turn them into reserved follow-ups, and ask whether to carry on
+  with `init`. Don't stop.
 - Read the repo: `README`, the existing `CLAUDE.md` (if any), build and test config (package.json,
   pyproject, Makefile, etc.), CI config, and which folders are vendored or generated.
 - Find each project's **real** test/check command. Run the cheap ones to confirm they work and to
